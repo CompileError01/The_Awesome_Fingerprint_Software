@@ -36,7 +36,7 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
 }
 
 #[get("/users-data")]
-fn users_data(key: ApiKey<'_>) -> String {
+fn users_data() -> String {
     let mut return_string: String = String::new();
     
     let users_file_names = get_users_file_names();
@@ -58,20 +58,20 @@ fn rocket() -> _ {
 
 
 fn get_users_file_names() -> Vec<PathBuf> {
-let users_dir_path = Path::new("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users");
-let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
-let mut users_file_names: Vec<PathBuf> = Vec::new();
-
-for entry in dir_entries {
-    match entry {
-        Ok(entry) => {
-            users_file_names.push(entry.file_name().into());
-        }
-
-        Err(error) => {
-            eprintln!("Failed to read entry: {}", error);
+    let users_dir_path = Path::new("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users");
+    let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
+    let mut users_file_names: Vec<PathBuf> = Vec::new();
+    
+    for entry in dir_entries {
+        match entry {
+            Ok(entry) => {
+                users_file_names.push(entry.file_name().into());
+            }
+    
+            Err(error) => {
+                eprintln!("Failed to read entry: {}", error);
+            }
         }
     }
-}
-users_file_names
+    users_file_names
 }
