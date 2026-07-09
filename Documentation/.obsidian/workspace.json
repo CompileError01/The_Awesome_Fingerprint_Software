@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Event reactions.md",
+                "file": "Requirements.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Event reactions"
+              "title": "Requirements"
             }
           }
         ]
@@ -187,8 +187,8 @@
   "active": "590e2f7a27ee78a0",
   "lastOpenFiles": [
     "Frontend.md",
-    "Event reactions.md",
     "Database.md",
+    "Event reactions.md",
     "Requirements.md",
     "Welcome.md"
   ]

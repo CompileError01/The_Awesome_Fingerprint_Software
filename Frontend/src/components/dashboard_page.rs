@@ -29,13 +29,14 @@ pub fn dashboard_page() -> Html {
 async fn fetch_data() -> String {
     let client = reqwest::Client::new();
 
-    client
+    let response = client
         .get("http://127.0.0.1:8000/users-data")
         .header("x-api-key", "valid_api_key")
         .send()
         .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
+        .unwrap();
+
+    println!("Status: {}", response.status());
+
+    response.text().await.unwrap()
 }
