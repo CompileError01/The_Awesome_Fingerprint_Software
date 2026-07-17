@@ -5,12 +5,15 @@ use rocket::http::Status;
 use rocket::launch;
 use rocket::request::{FromRequest, Outcome, Request};
 
-
 // CORS
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 
 // for PathBuffs
 use std::{fs, path::Path, path::PathBuf};
+
+// for Json
+use serde::{Serialize, Deserialize};
+use rocket::serde::json::Json;
 
 struct ApiKey<'r>(&'r str);
 
@@ -19,6 +22,18 @@ enum ApiKeyError {
     Missing,
     Invalid,
 }
+
+// yes I know that this struct is a duplicate, and has to be updated twice, please leave a complaint at goFrickYourself@gmail.com
+// has to also be updated on the Dashboard_Page
+#[derive(Serialize, Deserialize, Debug)]
+struct User {
+    id: u32,
+    group: String,
+    firstName: String,
+    lastName: String,
+    email: String,
+}
+
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for ApiKey<'r> {
@@ -38,8 +53,9 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
 }
 
 #[get("/users-data")]
-fn users_data(_key: ApiKey<'_>) -> String {
+fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     let mut return_string = String::new();
+    let mut users = Vec::new();
 
     let users_file_names = get_users_file_names();
 
@@ -48,10 +64,13 @@ fn users_data(_key: ApiKey<'_>) -> String {
             .join(user);
 
         let file_content = fs::read_to_string(path).unwrap();
-        return_string.push_str(&file_content);
+
+        let file_content_as_json: User = serde_json::from_str(&file_content).unwrap();
+        
+        users.push(file_content_as_json);
     }
 
-    return_string
+    Json(users)
 }
 
 #[launch]
