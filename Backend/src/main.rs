@@ -25,6 +25,7 @@ enum ApiKeyError {
 
 // yes I know that this struct is a duplicate, and has to be updated twice, please leave a complaint at goFrickYourself@gmail.com
 // has to also be updated on the Dashboard_Page
+
 #[derive(Serialize, Deserialize, Debug)]
 struct User {
     id: u32,
@@ -54,7 +55,6 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
 
 #[get("/users-data")]
 fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
-    let mut return_string = String::new();
     let mut users = Vec::new();
 
     let users_file_names = get_users_file_names();
@@ -71,6 +71,15 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     }
 
     Json(users)
+}
+
+#[put("/add-user/<name>", data="<user>")]
+async fn add_user(name: String, user: Json<User>) {
+    let path: String = format!("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users/{name}.json");
+
+    let json = serde_json::to_string_pretty(&*user).unwrap();
+
+    fs::write(path, json).unwrap();
 }
 
 #[launch]
@@ -94,6 +103,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(cors)
         .mount("/", routes![users_data])
+        .mount("/", routes![add_user])
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
