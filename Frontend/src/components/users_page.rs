@@ -19,7 +19,19 @@ struct User {
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
 
-    let add_user_button_event = {
+    let show_add_panel = use_state(|| false); 
+    
+    let open_add_panel =  {
+        let show_add_panel = show_add_panel.clone();
+        Callback::from(move |_| show_add_panel.set(true))
+    };
+
+    let close_add_panel = {
+        let show_add_panel = show_add_panel.clone();
+        Callback::from(move |_| show_add_panel.set(false))
+    };
+    
+     let add_user_button_event = {
         Callback::from(move |_| {
             spawn_local(async move {
                 add_user().await;
@@ -35,7 +47,7 @@ pub fn users_page() -> Html {
 
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let data = fetch_data().await;
+                let data = fetch_data().await; 
                 users.set(data);
             });
 
@@ -45,45 +57,65 @@ pub fn users_page() -> Html {
 
     html! {
         <>
-            <div>
-                <h1>{"Users"}</h1>
-                <button onclick={add_user_button_event} >{"add user"}</button>
-            </div>
-            
-            if users.is_empty() {
-                <p>{"Loading..."}</p>
-            } else {
-                
-                <p>{format!("Loaded {} users at {}", users.len(), Local::now())}</p>
+            if *show_add_panel {
+                <div class="modal-backdrop" onclick={close_add_panel.clone()}>
+                    <div
+                        class="modal"
+                        onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
+                    >
+                        <h2>{ "Add a user" }</h2>
+
+                        <div>
+                            <button onclick={add_user_button_event}>{"Add"}</button>
+                            <button onclick={close_add_panel}>{"Cancel"}</button>
+                        </div>
+
+                    </div>
+                </div>
             }
+            else {
+    
+                <div>
+                    <h1>{"Users"}</h1>
+                    <button onclick={open_add_panel} >{"add user"}</button>
+                </div>
+                
+                if users.is_empty() {
+                    <p>{"Loading..."}</p>
+                } else {
+                    
+                    <p>{format!("Loaded {} users at {}", users.len(), Local::now())}</p>
+                }
+    
+                <table border="1" width="80%">
+                    <thead>
+                        <tr>
+                            <th>{"ID"}</th>
+                            <th>{"First-Name"}</th>
+                            <th>{"Last-Name"}</th>
+                            <th>{"Email"}</th>
+                            <th>{"Group"}</th>
+                        </tr>
+                    </thead>
+    
+                    <tbody>
+                        {
+                            users.iter().map(|user| {
+                                html! {
+                                    <tr>
+                                        <td>{&user.id}</td>
+                                        <td>{&user.firstName}</td>
+                                        <td>{&user.lastName}</td>
+                                        <td>{&user.email}</td>
+                                        <td>{&user.group}</td>
+                                    </tr>
+                                }
+                            }).collect::<Html>()
+                        }
+                    </tbody>
+                </table>
 
-            <table border="1" width="80%">
-                <thead>
-                    <tr>
-                        <th>{"ID"}</th>
-                        <th>{"First-Name"}</th>
-                        <th>{"Last-Name"}</th>
-                        <th>{"Email"}</th>
-                        <th>{"Group"}</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {
-                        users.iter().map(|user| {
-                            html! {
-                                <tr>
-                                    <td>{&user.id}</td>
-                                    <td>{&user.firstName}</td>
-                                    <td>{&user.lastName}</td>
-                                    <td>{&user.email}</td>
-                                    <td>{&user.group}</td>
-                                </tr>
-                            }
-                        }).collect::<Html>()
-                    }
-                </tbody>
-            </table>
+            }
         </>
     }
 }

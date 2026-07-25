@@ -6,5 +6,6 @@
 - [ ] Deleting users
 - [ ] Editing users data
 - [ ] Updating file paths to work on every system
-- [ ] Sort users in id order in Frontend 
+- [ ] Sort users in id order in Frontend
+- [ ] Integrate adding new fingerprint data into database
 
