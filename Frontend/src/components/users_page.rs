@@ -1,5 +1,6 @@
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use yew::Callback;
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
 
@@ -17,9 +18,18 @@ struct User {
 
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
+
+    let add_user_button_event = {
+        Callback::from(move |_| {
+            spawn_local(async move {
+                add_user().await;
+            })
+        })
+    };
+
     // Holds all users returned by the API
     let users = use_state(Vec::<User>::new);
-
+    
     {
         let users = users.clone();
 
@@ -37,7 +47,7 @@ pub fn users_page() -> Html {
         <>
             <div>
                 <h1>{"Users"}</h1>
-                <button>{"add user"}</button>
+                <button onclick={add_user_button_event} >{"add user"}</button>
             </div>
             
             if users.is_empty() {
@@ -92,4 +102,18 @@ async fn fetch_data() -> Vec<User> {
     println!("Status: {}", response.status());
 
     response.json::<Vec<User>>().await.unwrap()
+}
+
+async fn add_user() {
+    let client = reqwest::Client::new();
+
+    client
+        .put("http://127.0.0.1:8000/add-user/Test_User")
+        .header("x-api-key", "valid_api_key")
+        .header("Content-Type", "application/json")
+        .body(r#"{"id": 3, "group": "member", "firstName": "Ahmed", "lastName": "Alfalahi", "email": "ahmedi@gmail.com"}"#)
+        .send()
+        .await
+        .unwrap();
+    
 }

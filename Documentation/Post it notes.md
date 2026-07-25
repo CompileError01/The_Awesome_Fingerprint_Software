@@ -1,0 +1,1 @@
+implement `curl -X PUT http://localhost:8000/add-user/Alfalahi_Ahmed -H "Content-Type: application/json" -H "x-api-key: valid_api_key" -d '{ "id": 3, "group": "member", "firstName": "Ahmed", "lastName": "Alfalahi", "email": "ahmedi@gmail.com" }'`
