@@ -1,9 +1,12 @@
+use std::process::id;
+
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew::Callback;
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
 use web_sys::{HtmlInputElement};
+use web_sys::window;
 
 // yes I know that this struct is a duplicate, and has to be updated twice,
 // please leave a complaint at goFrickYourself@gmail.com
@@ -19,7 +22,7 @@ struct User {
 
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
-
+    
     // Holds all users returned by the API
     let users = use_state(Vec::<User>::new);
 
@@ -74,6 +77,7 @@ pub fn users_page() -> Html {
         let show_add_panel = show_add_panel.clone();
         
         Callback::from(move |_| {
+            
             let first_name_input_ref = first_name_input_ref_cb.clone();
             let last_name_input_ref = last_name_input_ref_cb.clone();
             let email_input_ref = email_input_ref_cb.clone();
@@ -106,6 +110,21 @@ pub fn users_page() -> Html {
             show_add_panel.set(false)
         })
         
+    };
+
+    let delete_user_button_event = {
+        Callback::from(move |id: u32| {
+            let confirmed = window()
+                .unwrap()
+                .confirm_with_message("Are you sure you want to delete this user?")
+                .unwrap();
+
+            if confirmed {
+                spawn_local(async move {
+                    delete_user(id).await;
+                });
+            }
+        })
     };
 
 
@@ -148,6 +167,8 @@ pub fn users_page() -> Html {
                     
                     <p>{format!("Loaded {} users at {}", users.len(), Local::now())}</p>
                 }
+
+                
     
                 <table border="1" width="80%">
                     <thead>
@@ -163,6 +184,9 @@ pub fn users_page() -> Html {
                     <tbody>
                         {
                             users.iter().map(|user| {
+                                let delete_user_button_event = delete_user_button_event.clone();
+                                let id = user.id;
+                                
                                 html! {
                                     <tr>
                                         <td>{&user.id}</td>
@@ -170,6 +194,14 @@ pub fn users_page() -> Html {
                                         <td>{&user.lastName}</td>
                                         <td>{&user.email}</td>
                                         <td>{&user.group}</td>
+                                        <td> 
+                                            <button>{"edit"}</button>
+                                            <button onclick={
+                                             Callback::from(move |_: MouseEvent| {
+                                                 delete_user_button_event.emit(id);
+                                             })   
+                                            } >{"delete"}</button> 
+                                        </td>
                                     </tr>
                                 }
                             }).collect::<Html>()
@@ -202,7 +234,7 @@ async fn add_user(id: u32, group: String, first_name: String, last_name: String,
     let client = reqwest::Client::new();
     
     client
-        .put(format!("http://127.0.0.1:8000/add-user/{last_name}_{first_name}"))
+        .put(format!("http://127.0.0.1:8000/add-user/{id}"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
@@ -217,6 +249,17 @@ async fn add_user(id: u32, group: String, first_name: String, last_name: String,
         .await
         .unwrap();
     
+}
+
+async fn delete_user(id: u32) {
+    let client = reqwest::Client::new();
+    
+    client
+        .delete(format!("http://127.0.0.1:8000/delete-user/{id}"))
+        .header("x-api-key", "valid_api_key")
+        .send()
+        .await
+        .unwrap();
 }
 
 fn find_highest_id(users: &Vec<User>) -> u32 {

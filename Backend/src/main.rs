@@ -82,6 +82,12 @@ async fn add_user(name: String, user: Json<User>) {
     fs::write(path, json).unwrap();
 }
 
+#[delete("/delete-user/<id>")]
+async fn delete_user(id: u32)
+{
+    fs::remove_file(format!("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users/{id}.json")).unwrap();
+}
+
 #[launch]
 fn rocket() -> _ {
 
@@ -104,6 +110,7 @@ fn rocket() -> _ {
         .attach(cors)
         .mount("/", routes![users_data])
         .mount("/", routes![add_user])
+        .mount("/", routes![delete_user])
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
