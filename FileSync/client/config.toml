@@ -1,0 +1,5 @@
+# Use the server machines LAN IP here when running on a different PC.
+server_ip = "127.0.0.1"
+server_port = 9000
+# Local folder that mirrors the servers shared folder. Created automatically if missing.
+sync_folder = "mirror"
