@@ -3,10 +3,11 @@ use yew::prelude::*;
 use yew::Callback;
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
+use web_sys::{HtmlInputElement};
 
 // yes I know that this struct is a duplicate, and has to be updated twice,
 // please leave a complaint at goFrickYourself@gmail.com
-// also has to be updated in the backend
+// also has to be UPDATED in the BACKEND
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct User {
     id: u32,
@@ -19,29 +20,10 @@ struct User {
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
 
-    let show_add_panel = use_state(|| false); 
-    
-    let open_add_panel =  {
-        let show_add_panel = show_add_panel.clone();
-        Callback::from(move |_| show_add_panel.set(true))
-    };
-
-    let close_add_panel = {
-        let show_add_panel = show_add_panel.clone();
-        Callback::from(move |_| show_add_panel.set(false))
-    };
-    
-     let add_user_button_event = {
-        Callback::from(move |_| {
-            spawn_local(async move {
-                add_user().await;
-            })
-        })
-    };
-
     // Holds all users returned by the API
     let users = use_state(Vec::<User>::new);
-    
+
+    // gets all the user data from the api
     {
         let users = users.clone();
 
@@ -55,6 +37,79 @@ pub fn users_page() -> Html {
         });
     }
 
+    let latest_id: u32 = find_highest_id(&users);
+
+    let show_add_panel = use_state(|| false); 
+
+    let first_name_input_ref = use_node_ref();
+    let last_name_input_ref = use_node_ref();
+    let email_input_ref = use_node_ref();
+    let group_input_ref = use_node_ref();
+
+    let first_name_input_ref_cb = first_name_input_ref.clone();
+    let last_name_input_ref_cb = last_name_input_ref.clone();
+    let email_input_ref_cb = email_input_ref.clone();
+    let group_input_ref_cb = group_input_ref.clone();
+    
+    let open_add_panel =  {
+        let show_add_panel = show_add_panel.clone();
+        Callback::from(move |_| show_add_panel.set(true))
+    };
+
+    let close_add_panel = {
+        let show_add_panel = show_add_panel.clone();
+        Callback::from(move |_| show_add_panel.set(false))
+    };
+    
+/*      let add_user_button_event = {
+        Callback::from(move |_| {
+            spawn_local(async move {add_user_button_event
+                add_user().await;
+            })users
+        })
+    };
+*/
+
+    let add_user_button_event = {
+        let show_add_panel = show_add_panel.clone();
+        
+        Callback::from(move |_| {
+            let first_name_input_ref = first_name_input_ref_cb.clone();
+            let last_name_input_ref = last_name_input_ref_cb.clone();
+            let email_input_ref = email_input_ref_cb.clone();
+            let group_input_ref = group_input_ref_cb.clone();
+    
+            let id = latest_id + 1;
+            
+            let mut first_name: String = String::new();
+            let mut last_name: String = String::new();
+            let mut email: String = String::new();
+            let mut group: String = String::new();
+    
+            if let Some(input) = &first_name_input_ref.cast::<HtmlInputElement>() {
+                first_name = input.value();
+            }
+            if let Some(input) = last_name_input_ref.cast::<HtmlInputElement>() {
+                last_name = input.value();
+            }
+            if let Some(input) = email_input_ref.cast::<HtmlInputElement>() {
+                email = input.value();
+            }
+            if let Some(input) = group_input_ref.cast::<HtmlInputElement>() {
+                group = input.value();
+            }
+            
+            spawn_local(async move {
+                add_user(id, group, first_name, last_name, email).await;
+            });
+
+            show_add_panel.set(false)
+        })
+        
+    };
+
+
+
     html! {
         <>
             if *show_add_panel {
@@ -65,6 +120,13 @@ pub fn users_page() -> Html {
                     >
                         <h2>{ "Add a user" }</h2>
 
+                        <div>
+                            <input type="text" ref={first_name_input_ref} required=true placeholder="First Name"/>
+                            <input type="text" ref={last_name_input_ref} required=true placeholder="Last Name"/>
+                            <input type="email" ref={email_input_ref} required=true placeholder="Email"/>
+                            <input type="text" ref={group_input_ref} required=true placeholder="Group"/>
+                        </div>
+                        
                         <div>
                             <button onclick={add_user_button_event}>{"Add"}</button>
                             <button onclick={close_add_panel}>{"Cancel"}</button>
@@ -136,16 +198,34 @@ async fn fetch_data() -> Vec<User> {
     response.json::<Vec<User>>().await.unwrap()
 }
 
-async fn add_user() {
+async fn add_user(id: u32, group: String, first_name: String, last_name: String, email: String) {
     let client = reqwest::Client::new();
-
+    
     client
-        .put("http://127.0.0.1:8000/add-user/Test_User")
+        .put(format!("http://127.0.0.1:8000/add-user/{last_name}_{first_name}"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
-        .body(r#"{"id": 3, "group": "member", "firstName": "Ahmed", "lastName": "Alfalahi", "email": "ahmedi@gmail.com"}"#)
+        .body(format!(r#"{{
+            "id": {id}, 
+            "group": "{group}", 
+            "firstName": "{first_name}", 
+            "lastName": "{last_name}", 
+            "email": "{email}"
+            }}
+            "#))
         .send()
         .await
         .unwrap();
     
 }
+
+fn find_highest_id(users: &Vec<User>) -> u32 {
+    let mut highest_id: u32 = 0;
+
+    for user in users {
+        if user.id > highest_id { highest_id = user.id }
+    }
+
+    highest_id
+}
+
