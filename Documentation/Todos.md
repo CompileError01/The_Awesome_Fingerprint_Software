@@ -3,7 +3,7 @@
 - [ ] Improving security standards (https)
 - [x] Listing users
 - [x] Adding users
-- [ ] Deleting users
+- [x] Deleting users
 - [ ] Editing users data
 - [ ] Updating file paths to work on every system
 - [ ] Sort users in id order in Frontend
