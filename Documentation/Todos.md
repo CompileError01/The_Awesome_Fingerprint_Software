@@ -6,10 +6,9 @@
 - [x] Deleting users
 - [x] Editing users data
 - [ ] Login with different users
-- [ ] Updating file paths to work on every system
-- [ ] Sort users in id order in Frontend
+- [x] Updating file paths to work on every system
+- [x] Sort users in id order in front end
 - [ ] Integrate adding new fingerprint data into database
 - [ ] Proper Error handling
-- [ ] make safeguards for adding user panel
-- [ ] list users by id
+- [ ] Make safeguards for adding user panel
 - [ ] Returning to the same page (after closing popups f.e. adding users)

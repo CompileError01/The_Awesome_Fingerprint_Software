@@ -22,15 +22,18 @@ struct User {
 pub fn users_page() -> Html {
     
     // Holds all users returned by the API
-    let users = use_state(Vec::<User>::new);
+    let mut users = use_state(Vec::<User>::new);
 
-    // gets all the user data from the api
+    // gets all the user data from the api and sorts it by id
     {
         let users = users.clone();
 
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let data = fetch_data().await; 
+                let mut data = fetch_data().await; 
+
+                data.sort_by_key(|user| user.id);
+                
                 users.set(data);
             });
 
@@ -38,6 +41,8 @@ pub fn users_page() -> Html {
         });
     }
 
+
+    
     // For adding users
     let latest_id: u32 = find_highest_id(&users);
 
@@ -180,7 +185,7 @@ pub fn users_page() -> Html {
         })
     };
 
-    let user = get_single_user_data(*id_from_table, &users);
+    let user = get_single_user_data(*id_from_table, &users); // get user data for editing panel
     
     html! {
         <>
