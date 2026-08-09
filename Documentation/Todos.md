@@ -5,10 +5,11 @@
 - [x] Adding users
 - [x] Deleting users
 - [x] Editing users data
+- [ ] Login with different users
 - [ ] Updating file paths to work on every system
 - [ ] Sort users in id order in Frontend
 - [ ] Integrate adding new fingerprint data into database
 - [ ] Proper Error handling
 - [ ] make safeguards for adding user panel
 - [ ] list users by id
-- [ ] fix code repetition 
+- [ ] Returning to the same page (after closing popups f.e. adding users)

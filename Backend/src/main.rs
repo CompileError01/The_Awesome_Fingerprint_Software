@@ -60,7 +60,10 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     let users_file_names = get_users_file_names();
 
     for user in users_file_names {
-        let path = PathBuf::from("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/")
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("Database")
+            .join("Users")
             .join(user);
 
         let file_content = fs::read_to_string(path).unwrap();
@@ -75,7 +78,7 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
 
 #[put("/add-user/<id>", data="<user>")]
 async fn add_user(id: String, user: Json<User>) {
-    let path: String = format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json");
+    let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
 
@@ -85,13 +88,13 @@ async fn add_user(id: String, user: Json<User>) {
 #[delete("/delete-user/<id>")]
 async fn delete_user(id: u32)
 {
-    fs::remove_file(format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json")).unwrap();
+    fs::remove_file(format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id)).unwrap();
 }
 
 #[post("/edit-user/<id>", data="<user>")]
 async fn edit_user(id: u32, user: Json<User>)
 {
-    let path: String = format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json");
+    let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
 
@@ -125,8 +128,8 @@ fn rocket() -> _ {
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
-    let users_dir_path =
-        Path::new("/run/media/prsn/128Gb/FingerprintSystem/Database/Users");
+    let path = format!("{}/../Database/Users/", env!("CARGO_MANIFEST_DIR"));
+    let users_dir_path = Path::new(&path);
     let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
     let mut users_file_names = Vec::new();
 
