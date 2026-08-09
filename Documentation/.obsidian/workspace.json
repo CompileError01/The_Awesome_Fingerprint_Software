@@ -70,7 +70,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -216,11 +218,11 @@
   "active": "f3af2377ea3b76f1",
   "lastOpenFiles": [
     "Post it notes.md",
-    "Requirements.md",
     "Todos.md",
     "Database.md",
-    "Event reactions.md",
+    "Requirements.md",
     "Frontend.md",
+    "Event reactions.md",
     "Welcome.md"
   ]
 }

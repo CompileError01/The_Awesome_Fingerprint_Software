@@ -1,5 +1,3 @@
-use std::process::id;
-
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew::Callback;
@@ -40,6 +38,7 @@ pub fn users_page() -> Html {
         });
     }
 
+    // For adding users
     let latest_id: u32 = find_highest_id(&users);
 
     let show_add_panel = use_state(|| false); 
@@ -64,15 +63,32 @@ pub fn users_page() -> Html {
         Callback::from(move |_| show_add_panel.set(false))
     };
     
-/*      let add_user_button_event = {
-        Callback::from(move |_| {
-            spawn_local(async move {add_user_button_event
-                add_user().await;
-            })users
+
+    // For editing users
+    let show_edit_panel = use_state(|| false);
+
+    let mut id_from_table = use_state(|| 0u32);
+
+    let open_edit_panel = {
+        let show_edit_panel = show_edit_panel.clone();
+        let id_from_table = id_from_table.clone();
+
+        Callback::from(move |id: u32| {
+            id_from_table.set(id);
+            show_edit_panel.set(true)
         })
     };
-*/
 
+    let close_edit_panel = {
+        let show_edit_panel = show_edit_panel.clone();
+        Callback::from(move |_| show_edit_panel.set(false))
+    };
+
+    let first_name_input_ref_cb_clone = first_name_input_ref_cb.clone();
+    let last_name_input_ref_cb_clone = last_name_input_ref_cb.clone();
+    let email_input_ref_cb_clone = email_input_ref_cb.clone();
+    let group_input_ref_cb_clone = group_input_ref_cb.clone(); 
+    
     let add_user_button_event = {
         let show_add_panel = show_add_panel.clone();
         
@@ -127,8 +143,45 @@ pub fn users_page() -> Html {
         })
     };
 
+    let edit_user_button_event = {
+        let show_edit_panel = show_edit_panel.clone();
+        let id = *id_from_table;
 
+        Callback::from(move |_| {
+            let first_name_input_ref = first_name_input_ref_cb_clone.clone();
+            let last_name_input_ref = last_name_input_ref_cb_clone.clone();
+            let email_input_ref = email_input_ref_cb_clone.clone();
+            let group_input_ref = group_input_ref_cb_clone.clone();
+    
+            let mut first_name: String = String::new();
+            let mut last_name: String = String::new();
+            let mut email: String = String::new();
+            let mut group: String = String::new();
+    
+            if let Some(input) = &first_name_input_ref.cast::<HtmlInputElement>() {
+                first_name = input.value();
+            }
+            if let Some(input) = last_name_input_ref.cast::<HtmlInputElement>() {
+                last_name = input.value();
+            }
+            if let Some(input) = email_input_ref.cast::<HtmlInputElement>() {
+                email = input.value();
+            }
+            if let Some(input) = group_input_ref.cast::<HtmlInputElement>() {
+                group = input.value();
+            }
 
+            spawn_local(async move {
+                edit_user(id, group, first_name, last_name, email).await;
+            });
+
+            show_edit_panel.set(false);
+
+        })
+    };
+
+    let user = get_single_user_data(*id_from_table, &users);
+    
     html! {
         <>
             if *show_add_panel {
@@ -140,10 +193,10 @@ pub fn users_page() -> Html {
                         <h2>{ "Add a user" }</h2>
 
                         <div>
-                            <input type="text" ref={first_name_input_ref} required=true placeholder="First Name"/>
-                            <input type="text" ref={last_name_input_ref} required=true placeholder="Last Name"/>
-                            <input type="email" ref={email_input_ref} required=true placeholder="Email"/>
-                            <input type="text" ref={group_input_ref} required=true placeholder="Group"/>
+                            <input type="text" ref={&first_name_input_ref} required=true placeholder="First Name"/>
+                            <input type="text" ref={&last_name_input_ref} required=true placeholder="Last Name"/>
+                            <input type="email" ref={&email_input_ref} required=true placeholder="Email"/>
+                            <input type="text" ref={&group_input_ref} required=true placeholder="Group"/>
                         </div>
                         
                         <div>
@@ -154,22 +207,53 @@ pub fn users_page() -> Html {
                     </div>
                 </div>
             }
+
+            else if *show_edit_panel {
+                
+                
+                <div class="modal-backdrop" onclick={close_edit_panel.clone()}>
+                    <div
+                        class="modal"
+                        onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
+                    >
+                        <h2>{ "Edit User" }</h2>
+
+                        <div>
+                            <input type="text" ref={&first_name_input_ref} required=true 
+                                value={user.as_ref().unwrap().firstName.clone()} placeholder="First Name"/>
+
+                            <input type="text" ref={&last_name_input_ref} required=true
+                                value={user.as_ref().unwrap().lastName.clone()} placeholder="Last Name"/>
+                        
+                            <input type="email" ref={&email_input_ref} required=true
+                                value={user.as_ref().unwrap().email.clone()} placeholder="Email"/>
+                        
+                            <input type="text" ref={&group_input_ref} required=true
+                                value={user.as_ref().unwrap().group.clone()} placeholder="Group"/>
+                        </div>
+                        
+                        <div>
+                            <button onclick={edit_user_button_event}>{"Apply"}</button>
+                            <button onclick={close_edit_panel}>{"Cancel"}</button>
+                        </div>
+
+                    </div>
+                </div>
+            }
+            
+            
             else {
     
-                <div>
-                    <h1>{"Users"}</h1>
-                    <button onclick={open_add_panel} >{"add user"}</button>
-                </div>
+                <h1>{"Users"}</h1>
                 
                 if users.is_empty() {
                     <p>{"Loading..."}</p>
                 } else {
                     
                     <p>{format!("Loaded {} users at {}", users.len(), Local::now())}</p>
+                    <button onclick={open_add_panel} >{"add user"}</button> 
                 }
 
-                
-    
                 <table border="1" width="80%">
                     <thead>
                         <tr>
@@ -186,6 +270,7 @@ pub fn users_page() -> Html {
                             users.iter().map(|user| {
                                 let delete_user_button_event = delete_user_button_event.clone();
                                 let id = user.id;
+                                let open_edit_panel = open_edit_panel.clone();
                                 
                                 html! {
                                     <tr>
@@ -195,12 +280,17 @@ pub fn users_page() -> Html {
                                         <td>{&user.email}</td>
                                         <td>{&user.group}</td>
                                         <td> 
-                                            <button>{"edit"}</button>
+                                            <button onclick={                                                
+                                                Callback::from(move |_: MouseEvent| {
+                                                    open_edit_panel.emit(id);
+                                                })
+                                            }>{"edit"}</button>
+                                            
                                             <button onclick={
-                                             Callback::from(move |_: MouseEvent| {
-                                                 delete_user_button_event.emit(id);
-                                             })   
-                                            } >{"delete"}</button> 
+                                                Callback::from(move |_: MouseEvent| {
+                                                    delete_user_button_event.emit(id);
+                                                })   
+                                            }> {"delete"}</button> 
                                         </td>
                                     </tr>
                                 }
@@ -248,7 +338,26 @@ async fn add_user(id: u32, group: String, first_name: String, last_name: String,
         .send()
         .await
         .unwrap();
+}
+
+async fn edit_user(id: u32, group: String, first_name: String, last_name: String, email: String) {
+    let client = reqwest::Client::new();
     
+    client
+        .post(format!("http://127.0.0.1:8000/edit-user/{id}"))
+        .header("x-api-key", "valid_api_key")
+        .header("Content-Type", "application/json")
+        .body(format!(r#"{{
+            "id": {id}, 
+            "group": "{group}", 
+            "firstName": "{first_name}", 
+            "lastName": "{last_name}", 
+            "email": "{email}"
+            }}
+            "#))
+        .send()
+        .await
+        .unwrap();
 }
 
 async fn delete_user(id: u32) {
@@ -262,6 +371,17 @@ async fn delete_user(id: u32) {
         .unwrap();
 }
 
+fn get_single_user_data(id: u32, users: &Vec<User>) -> Option<User> {
+    for user in users {
+        if user.id == id {
+            return Some(user.clone());
+        }
+    }
+    None
+     // I know that this is very stupid
+     // i know i have to implement error handling for this, but I do not have the patience to do it right now
+}
+
 fn find_highest_id(users: &Vec<User>) -> u32 {
     let mut highest_id: u32 = 0;
 
@@ -271,4 +391,3 @@ fn find_highest_id(users: &Vec<User>) -> u32 {
 
     highest_id
 }
-

@@ -60,7 +60,7 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     let users_file_names = get_users_file_names();
 
     for user in users_file_names {
-        let path = PathBuf::from("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users/")
+        let path = PathBuf::from("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/")
             .join(user);
 
         let file_content = fs::read_to_string(path).unwrap();
@@ -73,9 +73,9 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     Json(users)
 }
 
-#[put("/add-user/<name>", data="<user>")]
-async fn add_user(name: String, user: Json<User>) {
-    let path: String = format!("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users/{name}.json");
+#[put("/add-user/<id>", data="<user>")]
+async fn add_user(id: String, user: Json<User>) {
+    let path: String = format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json");
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
 
@@ -85,7 +85,17 @@ async fn add_user(name: String, user: Json<User>) {
 #[delete("/delete-user/<id>")]
 async fn delete_user(id: u32)
 {
-    fs::remove_file(format!("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users/{id}.json")).unwrap();
+    fs::remove_file(format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json")).unwrap();
+}
+
+#[post("/edit-user/<id>", data="<user>")]
+async fn edit_user(id: u32, user: Json<User>)
+{
+    let path: String = format!("/run/media/prsn/128Gb/FingerprintSystem/Database/Users/{id}.json");
+
+    let json = serde_json::to_string_pretty(&*user).unwrap();
+
+    fs::write(path, json).unwrap();
 }
 
 #[launch]
@@ -111,11 +121,12 @@ fn rocket() -> _ {
         .mount("/", routes![users_data])
         .mount("/", routes![add_user])
         .mount("/", routes![delete_user])
+        .mount("/", routes![edit_user])
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
     let users_dir_path =
-        Path::new("/run/media/sleuth/128Gb/FingerprintSystem/Database/Users");
+        Path::new("/run/media/prsn/128Gb/FingerprintSystem/Database/Users");
     let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
     let mut users_file_names = Vec::new();
 
