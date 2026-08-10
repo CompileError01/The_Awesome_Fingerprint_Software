@@ -1,5 +1,4 @@
- 
-- [ ] Implementing proper API-key handling
+ - [ ] Implementing proper API-key handling
 - [ ] Improving security standards (https)
 - [x] Listing users
 - [x] Adding users
@@ -12,3 +11,4 @@
 - [ ] Proper Error handling
 - [ ] Make safeguards for adding user panel
 - [ ] Returning to the same page (after closing popups f.e. adding users)
+- [ ] Show success/error messages when a http request is sent to the back end  

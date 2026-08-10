@@ -53,6 +53,9 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
     }
 }
 
+//#[post("/verify-login/")]
+//fn verify_login()
+
 #[get("/users-data")]
 fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
     let mut users = Vec::new();
@@ -77,7 +80,7 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
 }
 
 #[put("/add-user/<id>", data="<user>")]
-async fn add_user(id: String, user: Json<User>) {
+async fn add_user(_key: ApiKey<'_>, id: String, user: Json<User>) {
     let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
@@ -86,13 +89,13 @@ async fn add_user(id: String, user: Json<User>) {
 }
 
 #[delete("/delete-user/<id>")]
-async fn delete_user(id: u32)
+async fn delete_user(_key: ApiKey<'_>, id: u32)
 {
     fs::remove_file(format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id)).unwrap();
 }
 
 #[post("/edit-user/<id>", data="<user>")]
-async fn edit_user(id: u32, user: Json<User>)
+async fn edit_user(_key: ApiKey<'_>, id: u32, user: Json<User>)
 {
     let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
