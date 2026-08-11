@@ -1,24 +1,36 @@
+use reqwest::StatusCode;
 use yew::prelude::*;
 use yew::Callback;
 use web_sys::{HtmlInputElement};
 use wasm_bindgen_futures::spawn_local;
 
+use crate::AuthState;
 
 
 #[function_component(LoginPage)]
 pub fn login_page() -> Html {
+    
+    let auth_state = use_context::<UseStateHandle<AuthState>>()
+            .expect("AuthState context not found");
+    
     let username_input_ref = use_node_ref();
     let password_input_ref = use_node_ref();
 
     let login_button_event = {
+        let auth_state = auth_state.clone();
+        
         let username_input_ref = username_input_ref.clone();
         let password_input_ref = password_input_ref.clone();
-
+        
         Callback::from(move |_| {
+
+            let auth_state = auth_state.clone();
             
             let mut username: String = String::new();
             let mut password: String = String::new();
-    
+
+            let status_code: StatusCode = StatusCode::default(); 
+            
             if let Some(input) = &username_input_ref.cast::<HtmlInputElement>() {
                 username = input.value();
             }
@@ -27,7 +39,11 @@ pub fn login_page() -> Html {
             }
     
             spawn_local(async move {
-            verify_login(username, password).await;
+            let status_code = verify_login(username, password).await;
+
+            if status_code ==  StatusCode::OK {
+                auth_state.set(AuthState::LoggedIn);
+            }
             });
 
         })
@@ -47,21 +63,21 @@ pub fn login_page() -> Html {
     }
 }
 
-async fn verify_login(username: String, password: String) {
+async fn verify_login(username: String, password: String) -> StatusCode {
     let client = reqwest::Client::new();
 
     let response = client
-        .post(format!("http://127.0.0.1:8000/validate-login/"))
+        .post(format!("http://127.0.0.1:8000/verify-login/"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
-            "username": {username},
-            "password": {password}
+            "username": "{username}",
+            "password": "{password}"
             }}
             "#))
         .send()
         .await
         .unwrap();
-    
-    panic!("Yoo this is the big status code: {}", response.status());
+
+    response.status()
 }

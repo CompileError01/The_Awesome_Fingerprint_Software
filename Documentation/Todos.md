@@ -11,4 +11,4 @@
 - [ ] Proper Error handling
 - [ ] Make safeguards for adding user panel
 - [ ] Returning to the same page (after closing popups f.e. adding users)
-- [ ] Show success/error messages when a http request is sent to the back end  
+- [ ] Show success/error messages when a http request is sent to the back end ^ 

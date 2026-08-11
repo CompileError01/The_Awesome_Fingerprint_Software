@@ -23,9 +23,14 @@ enum ApiKeyError {
     Invalid,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct PanelUser {
+    username: String,
+    password: String,
+}
+
 // yes I know that this struct is a duplicate, and has to be updated twice, please leave a complaint at goFrickYourself@gmail.com
 // has to also be updated on the Dashboard_Page
-
 #[derive(Serialize, Deserialize, Debug)]
 struct User {
     id: u32,
@@ -53,8 +58,19 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
     }
 }
 
-//#[post("/verify-login/")]
-//fn verify_login()
+#[post("/verify-login", data="<data>")]
+fn verify_login(data: Json<PanelUser>) -> Status
+{
+    let username = data.username.clone();
+    let password = data.password.clone();
+
+    if username == "admin" && password == "admin" {
+        return Status::Ok;
+    }
+    else {
+        Status::Unauthorized
+    }
+}
 
 #[get("/users-data")]
 fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
@@ -124,6 +140,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .attach(cors)
+        .mount("/", routes![verify_login])
         .mount("/", routes![users_data])
         .mount("/", routes![add_user])
         .mount("/", routes![delete_user])

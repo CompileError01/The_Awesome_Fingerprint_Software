@@ -20,15 +20,19 @@ enum Pages {
     LogPage,
 }
 
+#[derive(PartialEq)]
 pub enum AuthState {
-    Loading,
     LoggedOut,
     LoggedIn,
     
 }
 
+
+
 #[component]
 fn App() -> Html {
+    let auth_state = use_state(|| AuthState::LoggedOut);
+    
     let current_page = use_state(|| Pages::DashboardPage);
 
     let dashboard_page = {
@@ -47,17 +51,14 @@ fn App() -> Html {
         let current_page = current_page.clone();
         Callback::from(move |_: MouseEvent| current_page.set(Pages::LogPage))
     };
-
-    let auth_state = use_state(|| AuthState::LoggedIn);
-    let logged_in: bool = false;
     
     html! {
+        <ContextProvider<UseStateHandle<AuthState>> context={auth_state.clone()}>
         <>
         <hr/>
         {
             match *auth_state {
                 AuthState::LoggedOut => html! { <LoginPage/> },
-                AuthState::Loading => html! { <LoginPage/> },
                 AuthState::LoggedIn => html! {
                     <>
                     <div>
@@ -83,6 +84,7 @@ fn App() -> Html {
         }
     
         </>
+        </ContextProvider<UseStateHandle<AuthState>>>
     }
 }
 
