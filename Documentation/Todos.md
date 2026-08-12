@@ -5,6 +5,7 @@
 - [x] Deleting users
 - [x] Editing users data
 - [ ] Login with different users
+- [ ] Use cookies for a session
 - [x] Updating file paths to work on every system
 - [x] Sort users in id order in front end
 - [ ] Integrate adding new fingerprint data into database

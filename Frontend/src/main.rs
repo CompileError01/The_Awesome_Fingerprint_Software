@@ -7,10 +7,10 @@ use components::doors_page::DoorsPage;
 use components::log_page::LogPage;
 use components::users_page::UsersPage;
 
-struct PanelUser {
+/*struct PanelUser {
     username: String,
-    password: String,
-}
+    passwordHash: String,
+}*/
 
 #[derive(Clone, PartialEq)]
 enum Pages {

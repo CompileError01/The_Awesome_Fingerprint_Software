@@ -4,6 +4,8 @@ extern crate rocket;
 use rocket::http::Status;
 use rocket::launch;
 use rocket::request::{FromRequest, Outcome, Request};
+use rocket::http::{Cookie, CookieJar};
+use rocket::time::Duration;
 
 // CORS
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
@@ -26,7 +28,7 @@ enum ApiKeyError {
 #[derive(Serialize, Deserialize, Debug)]
 struct PanelUser {
     username: String,
-    password: String,
+    passwordHash: String,
 }
 
 // yes I know that this struct is a duplicate, and has to be updated twice, please leave a complaint at goFrickYourself@gmail.com
@@ -59,12 +61,32 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
 }
 
 #[post("/verify-login", data="<data>")]
-fn verify_login(data: Json<PanelUser>) -> Status
+fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status
 {
     let username = data.username.clone();
-    let password = data.password.clone();
+    let password_hash = data.passwordHash.clone();
 
-    if username == "admin" && password == "admin" {
+    let mut verification_successfull: bool = false;
+
+    let panel_users: Vec<PathBuf> = get_panel_users_file_names();
+
+    for user in panel_users {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("PanelUsers")
+            .join(user);
+
+        let file_content = fs::read_to_string(path).unwrap();
+
+        let user: PanelUser = serde_json::from_str(&file_content).unwrap();
+
+        if username == user.username && password_hash == user.passwordHash {
+            verification_successfull = true;
+        }
+        
+    }
+    
+    if verification_successfull {
+        
         return Status::Ok;
     }
     else {
@@ -149,6 +171,22 @@ fn rocket() -> _ {
 
 fn get_users_file_names() -> Vec<PathBuf> {
     let path = format!("{}/../Database/Users/", env!("CARGO_MANIFEST_DIR"));
+    let users_dir_path = Path::new(&path);
+    let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
+    let mut users_file_names = Vec::new();
+
+    for entry in dir_entries {
+        match entry {
+            Ok(entry) => users_file_names.push(entry.file_name().into()),
+            Err(error) => eprintln!("Failed to read entry: {}", error),
+        }
+    }
+
+    users_file_names
+}
+
+fn get_panel_users_file_names() -> Vec<PathBuf> {
+    let path = format!("{}/PanelUsers", env!("CARGO_MANIFEST_DIR"));
     let users_dir_path = Path::new(&path);
     let dir_entries = fs::read_dir(users_dir_path).expect("Failed to open directory!");
     let mut users_file_names = Vec::new();

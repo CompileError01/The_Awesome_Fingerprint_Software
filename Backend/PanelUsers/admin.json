@@ -1,0 +1,4 @@
+{
+  "username": "admin",
+  "passwordHash": "$argon2id$v=19$m=19456,t=2,p=1$testtesttest$5E+nBJsQtKlalU27p08iLDVCtNS8YJQJw4t0GSePeiw"
+}

@@ -4,6 +4,9 @@ use yew::Callback;
 use web_sys::{HtmlInputElement};
 use wasm_bindgen_futures::spawn_local;
 
+// hashing
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::Salt};
+
 use crate::AuthState;
 
 
@@ -66,13 +69,15 @@ pub fn login_page() -> Html {
 async fn verify_login(username: String, password: String) -> StatusCode {
     let client = reqwest::Client::new();
 
+    let hash: PasswordHash<'static> = hash_password(password);
+    
     let response = client
         .post(format!("http://127.0.0.1:8000/verify-login/"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
             "username": "{username}",
-            "password": "{password}"
+            "passwordHash": "{hash}"
             }}
             "#))
         .send()
@@ -80,4 +85,13 @@ async fn verify_login(username: String, password: String) -> StatusCode {
         .unwrap();
 
     response.status()
+}
+
+fn hash_password(password: String) -> PasswordHash<'static> {
+    let salt_str = "testtesttest"; // reminder for myself do not use bad salt
+    let salt: Salt = salt_str.try_into().unwrap();
+    
+    let argon2 = Argon2::default();
+    argon2.hash_password(password.as_bytes(), salt).unwrap()
+
 }
