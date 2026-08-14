@@ -123,12 +123,22 @@ pub fn users_page() -> Html {
             if let Some(input) = group_input_ref.cast::<HtmlInputElement>() {
                 group = input.value();
             }
-            
-            spawn_local(async move {
-                add_user(id, group, first_name, last_name, email).await;
-            });
 
-            show_add_panel.set(false)
+            if first_name != String::new() 
+                && last_name != String::new()
+                && email != String::new()
+                && group != String::new()
+            {
+                    
+                spawn_local(async move {
+                    add_user(id, group, first_name, last_name, email).await;
+                });
+    
+                show_add_panel.set(false)
+            }
+            else {
+                window().unwrap().alert_with_message("An invalid input has been given!").unwrap();
+            }
         })
         
     };
