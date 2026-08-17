@@ -3,8 +3,12 @@ use yew::prelude::*;
 use yew::Callback;
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
-use web_sys::{HtmlInputElement};
-use web_sys::window;
+use web_sys::{window, HtmlInputElement, HtmlDocument};
+
+
+use wasm_bindgen::JsValue;
+
+
 
 // yes I know that this struct is a duplicate, and has to be updated twice,
 // please leave a complaint at goFrickYourself@gmail.com
@@ -18,8 +22,27 @@ struct User {
     email: String,
 }
 
+
+fn set_cookie(name: &str, value: &str) {
+    let Some(document) = window().and_then(|w| w.document()) else {
+        return;
+    };
+
+    let cookie = format!("{}={}; Path=/", name, value);
+
+    let _ = js_sys::Reflect::set(
+        &document,
+        &"cookie".into(),
+        &cookie.into(),
+    );
+}
+
+
+
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
+
+    set_cookie("test", "test");
     
     // Holds all users returned by the API
     let mut users = use_state(Vec::<User>::new);

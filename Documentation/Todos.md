@@ -4,7 +4,8 @@
 - [x] Adding users
 - [x] Deleting users
 - [x] Editing users data
-- [ ] Login with different users
+- [x] Login with different users
+- [ ] Add log messages
 - [ ] Use cookies for a session
 - [x] Updating file paths to work on every system
 - [x] Sort users in id order in front end
@@ -12,4 +13,4 @@
 - [ ] Proper Error handling
 - [ ] Make safeguards for adding user panel
 - [ ] Returning to the same page (after closing popups f.e. adding users)
-- [ ] Show success/error messages when a http request is sent to the back end ^ 
+- [ ] Show success/error messages when a http request is sent to the back end

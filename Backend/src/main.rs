@@ -2,20 +2,25 @@
 #[macro_use]
 extern crate rocket;
 use rocket::http::Status;
-use rocket::launch;
+use rocket::{data, launch};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::http::{Cookie, CookieJar};
-use rocket::time::Duration;
 
 // CORS
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 
+use std::fmt::format;
 // for PathBuffs
 use std::{fs, path::Path, path::PathBuf};
 
 // for Json
 use serde::{Serialize, Deserialize};
 use rocket::serde::json::Json;
+use serde_json::{Value, json};
+
+
+// for date and time
+use chrono::{DateTime, Local};
 
 struct ApiKey<'r>(&'r str);
 
@@ -30,6 +35,13 @@ struct PanelUser {
     username: String,
     passwordHash: String,
 }
+
+/*#[derive(Serialize, Deserialize, Debug)]
+struct Log {
+    datetime: String,
+    event: String,
+    doer: String,
+}*/
 
 // yes I know that this struct is a duplicate, and has to be updated twice, please leave a complaint at goFrickYourself@gmail.com
 // has to also be updated on the Dashboard_Page
@@ -61,8 +73,14 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
 }
 
 #[post("/verify-login", data="<data>")]
-fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status
-{
+fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
+
+    cookies.add(
+        Cookie::build(("session", "abc123"))
+            .path("/")
+            .http_only(true)
+    );
+    
     let username = data.username.clone();
     let password_hash = data.passwordHash.clone();
 
@@ -96,8 +114,8 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status
 
 #[get("/users-data")]
 fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
+    
     let mut users = Vec::new();
-
     let users_file_names = get_users_file_names();
 
     for user in users_file_names {
@@ -144,7 +162,8 @@ async fn edit_user(_key: ApiKey<'_>, id: u32, user: Json<User>)
 
 #[launch]
 fn rocket() -> _ {
-
+    log("Backend launched", "nA");
+    
     // this handels cors autorization (it took me 5 hours to fix this, frick this shit)
     let cors = CorsOptions {
         allowed_origins: AllowedOrigins::all(),
@@ -167,6 +186,28 @@ fn rocket() -> _ {
         .mount("/", routes![add_user])
         .mount("/", routes![delete_user])
         .mount("/", routes![edit_user])
+}
+
+fn log(event: &str, doer: &str) {
+    let format_path = format!("{}/Logs/log.json", env!("CARGO_MANIFEST_DIR"));
+    let path = format_path.as_str();
+    let dt_string = Local::now().to_string();
+    let dt = dt_string.as_str();
+
+    let mut data: Value = if std::path::Path::new(path).exists() {
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    } else {
+        json!({})
+    };
+
+    data["log01"] = json!({
+        "datetime": dt,
+        "event": event,
+        "doer": doer
+    
+    });
+
+    fs::write(path, serde_json::to_string_pretty(&data).unwrap()).unwrap();
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
@@ -200,3 +241,4 @@ fn get_panel_users_file_names() -> Vec<PathBuf> {
 
     users_file_names
 }
+

@@ -3,9 +3,11 @@ use yew::prelude::*;
 use yew::Callback;
 use web_sys::{HtmlInputElement};
 use wasm_bindgen_futures::spawn_local;
+use gloo_net::http::Request;
+
 
 // hashing
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::Salt};
+use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::Salt};
 
 use crate::AuthState;
 
@@ -66,13 +68,14 @@ pub fn login_page() -> Html {
     }
 }
 
-async fn verify_login(username: String, password: String) -> StatusCode {
+async fn verify_login(username: String, password: String) -> u16 {
     let client = reqwest::Client::new();
 
     let hash: PasswordHash<'static> = hash_password(password);
-    
-    let response = client
-        .post(format!("http://127.0.0.1:8000/verify-login/"))
+   
+
+    let response = Request::post("http://127.0.0.1:8000/verify-login")
+        .credentials(web_sys::RequestCredentials::Include)
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
@@ -80,6 +83,7 @@ async fn verify_login(username: String, password: String) -> StatusCode {
             "passwordHash": "{hash}"
             }}
             "#))
+        .expect("wrong formatting!")
         .send()
         .await
         .unwrap();
