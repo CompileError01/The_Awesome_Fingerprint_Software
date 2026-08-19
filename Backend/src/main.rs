@@ -56,7 +56,7 @@ struct User {
 }
 
 
-#[rocket::async_trait]
+/*#[rocket::async_trait]
 impl<'r> FromRequest<'r> for ApiKey<'r> {
     type Error = ApiKeyError;
 
@@ -71,16 +71,10 @@ impl<'r> FromRequest<'r> for ApiKey<'r> {
             Some(_) => Outcome::Error((Status::Unauthorized, ApiKeyError::Invalid)),
         }
     }
-}
+}*/
 
 #[post("/verify-login", data="<data>")]
 fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
-
-    cookies.add(
-        Cookie::build(("session", "abc123"))
-            .path("/")
-            .http_only(true)
-    );
     
     let username = data.username.clone();
     let password_hash = data.passwordHash.clone();
@@ -106,8 +100,8 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
     
     if verification_successful {
 
-        cookies.add(
-                Cookie::build(("session", "abc123"))
+        cookies.add_private(
+                Cookie::build(("session", "valid_session_cookie"))
                     .path("/")
                     .http_only(true)
                     .secure(true)
@@ -125,7 +119,17 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
 }
 
 #[get("/users-data")]
-fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
+fn users_data(cookies: &CookieJar<'_>) -> Result<Json<Vec<User>>, Status> {
+
+    let session = match cookies.get_private("session") {
+           Some(cookie) => cookie.value().to_string(),
+           None => return Err(Status::Unauthorized),
+    };
+    
+    if session != "valid_session_cookie" {
+       return Err(Status::Unauthorized);
+    }
+
     
     let mut users = Vec::new();
     let users_file_names = get_users_file_names();
@@ -144,11 +148,21 @@ fn users_data(_key: ApiKey<'_>) -> Json<Vec<User>> {
         users.push(file_content_as_json);
     }
 
-    Json(users)
+    Ok(Json(users))
 }
 
 #[put("/add-user/<id>", data="<user>")]
-async fn add_user(_key: ApiKey<'_>, id: String, user: Json<User>) {
+async fn add_user(id: String, user: Json<User>, cookies: &CookieJar<'_>) -> Status {
+
+    let session = match cookies.get_private("session") {
+           Some(cookie) => cookie.value().to_string(),
+           None => return Status::Unauthorized,
+    };
+    
+    if session != "valid_session_cookie" {
+       return Status::Unauthorized;
+    }
+    
     let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
@@ -156,19 +170,40 @@ async fn add_user(_key: ApiKey<'_>, id: String, user: Json<User>) {
     fs::write(path, json).unwrap();
 
     log(format!("Added user: {id}"), String::from("test"));
+
+    return Status::Ok;
 }
 
 #[delete("/delete-user/<id>")]
-async fn delete_user(_key: ApiKey<'_>, id: u32)
-{
+async fn delete_user(id: u32, cookies: &CookieJar<'_>) -> Status{
+    let session = match cookies.get_private("session") {
+           Some(cookie) => cookie.value().to_string(),
+           None => return Status::Unauthorized,
+    };
+    
+    if session != "valid_session_cookie" {
+       return Status::Unauthorized;
+    }
+    
     fs::remove_file(format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id)).unwrap();
 
     log(format!("Deleted user: {id}"), String::from("test"));
+
+    return Status::Ok;
 }
 
 #[post("/edit-user/<id>", data="<user>")]
-async fn edit_user(_key: ApiKey<'_>, id: u32, user: Json<User>)
-{
+async fn edit_user(id: u32, user: Json<User>, cookies: &CookieJar<'_>) -> Status{
+
+    let session = match cookies.get_private("session") {
+           Some(cookie) => cookie.value().to_string(),
+           None => return Status::Unauthorized,
+    };
+    
+    if session != "valid_session_cookie" {
+       return Status::Unauthorized;
+    }
+    
     let path: String = format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id);
 
     let json = serde_json::to_string_pretty(&*user).unwrap();
@@ -176,6 +211,8 @@ async fn edit_user(_key: ApiKey<'_>, id: u32, user: Json<User>)
     fs::write(path, json).unwrap();
 
     log(format!("Edited user: {id}"), String::from("test"));
+
+    return Status::Ok;
 }
 
 #[launch]
@@ -191,7 +228,6 @@ fn rocket() -> _ {
             "Accept",
             "Authorization",
             "Content-Type",
-            "x-api-key",
         ]),
         allow_credentials: true,
         ..Default::default()

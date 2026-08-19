@@ -75,7 +75,6 @@ async fn verify_login(username: String, password: String) -> u16 {
 
 let response = Request::post("https://127.0.0.1:8000/verify-login")
         .credentials(web_sys::RequestCredentials::Include)
-        .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
             "username": "{username}",

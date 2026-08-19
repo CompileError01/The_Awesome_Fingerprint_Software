@@ -7,6 +7,9 @@ use web_sys::{window, HtmlInputElement, HtmlDocument};
 
 use wasm_bindgen::JsValue;
 
+use gloo_net::http::Request;
+use web_sys::RequestCredentials;
+
 // yes I know that this struct is a duplicate, and has to be updated twice,
 // please leave a complaint at goFrickYourself@gmail.com
 // also has to be UPDATED in the BACKEND
@@ -322,69 +325,65 @@ pub fn users_page() -> Html {
 
 
 async fn fetch_data() -> Vec<User> {
-    let client = reqwest::Client::new();
 
-    let response = client
-        .get("https://127.0.0.1:8000/users-data")
-        .header("x-api-key", "valid_api_key")
-        .send()
-        .await
-        .unwrap();
-
-    println!("Status: {}", response.status());
+    let response = Request::get("https://127.0.0.1:8000/users-data")
+            .credentials(web_sys::RequestCredentials::Include)
+            .send()
+            .await
+            .unwrap();
 
     response.json::<Vec<User>>().await.unwrap()
 }
 
 async fn add_user(id: u32, group: String, first_name: String, last_name: String, email: String) {
-    let client = reqwest::Client::new();
+
+    let response = Request::put(format!("https://127.0.0.1:8000/add-user/{id}").as_str())
+            .credentials(web_sys::RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{
+                "id": {id}, 
+                "group": "{group}", 
+                "firstName": "{first_name}", 
+                "lastName": "{last_name}", 
+                "email": "{email}"
+                }}
+                "#))
+            .expect("wrong formatting!")
+            .send()
+            .await
+            .unwrap();
     
-    client
-        .put(format!("https://127.0.0.1:8000/add-user/{id}"))
-        .header("x-api-key", "valid_api_key")
-        .header("Content-Type", "application/json")
-        .body(format!(r#"{{
-            "id": {id}, 
-            "group": "{group}", 
-            "firstName": "{first_name}", 
-            "lastName": "{last_name}", 
-            "email": "{email}"
-            }}
-            "#))
-        .send()
-        .await
-        .unwrap();
 }
 
 async fn edit_user(id: u32, group: String, first_name: String, last_name: String, email: String) {
-    let client = reqwest::Client::new();
-    
-    client
-        .post(format!("https://127.0.0.1:8000/edit-user/{id}"))
-        .header("x-api-key", "valid_api_key")
-        .header("Content-Type", "application/json")
-        .body(format!(r#"{{
-            "id": {id}, 
-            "group": "{group}", 
-            "firstName": "{first_name}", 
-            "lastName": "{last_name}", 
-            "email": "{email}"
-            }}
-            "#))
-        .send()
-        .await
-        .unwrap();
+
+    let response = Request::post(format!("https://127.0.0.1:8000/edit-user/{id}").as_str())
+            .credentials(web_sys::RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{
+                "id": {id}, 
+                "group": "{group}", 
+                "firstName": "{first_name}", 
+                "lastName": "{last_name}", 
+                "email": "{email}"
+                }}
+                "#))
+            .expect("wrong formatting!")
+            .send()
+            .await
+            .unwrap();
 }
 
 async fn delete_user(id: u32) {
-    let client = reqwest::Client::new();
+
+    let response = Request::delete(format!("https://127.0.0.1:8000/delete-user/{id}").as_str())
+            .credentials(web_sys::RequestCredentials::Include)
+            .send()
+            .await
+            .unwrap();
+
+
     
-    client
-        .delete(format!("https://127.0.0.1:8000/delete-user/{id}"))
-        .header("x-api-key", "valid_api_key")
-        .send()
-        .await
-        .unwrap();
 }
 
 fn get_single_user_data(id: u32, users: &Vec<User>) -> Option<User> {
