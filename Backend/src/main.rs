@@ -18,9 +18,9 @@ use serde::{Serialize, Deserialize};
 use rocket::serde::json::Json;
 use serde_json::{Value, json};
 
-
 // for date and time
 use chrono::{DateTime, Local};
+
 
 struct ApiKey<'r>(&'r str);
 
@@ -84,7 +84,7 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
     let username = data.username.clone();
     let password_hash = data.passwordHash.clone();
 
-    let mut verification_successfull: bool = false;
+    let mut verification_successful: bool = false;
 
     let panel_users: Vec<PathBuf> = get_panel_users_file_names();
 
@@ -98,16 +98,19 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
         let user: PanelUser = serde_json::from_str(&file_content).unwrap();
 
         if username == user.username && password_hash == user.passwordHash {
-            verification_successfull = true;
+            verification_successful = true;
         }
         
     }
     
-    if verification_successfull {
-        
+    if verification_successful {
+
+        log(format!("Access Granted"), username);
         return Status::Ok;
     }
     else {
+
+        log(format!("Access Denied"), username);
         Status::Unauthorized
     }
 }
@@ -142,12 +145,16 @@ async fn add_user(_key: ApiKey<'_>, id: String, user: Json<User>) {
     let json = serde_json::to_string_pretty(&*user).unwrap();
 
     fs::write(path, json).unwrap();
+
+    log(format!("Added user: {id}"), String::from("test"));
 }
 
 #[delete("/delete-user/<id>")]
 async fn delete_user(_key: ApiKey<'_>, id: u32)
 {
     fs::remove_file(format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id)).unwrap();
+
+    log(format!("Deleted user: {id}"), String::from("test"));
 }
 
 #[post("/edit-user/<id>", data="<user>")]
@@ -158,11 +165,13 @@ async fn edit_user(_key: ApiKey<'_>, id: u32, user: Json<User>)
     let json = serde_json::to_string_pretty(&*user).unwrap();
 
     fs::write(path, json).unwrap();
+
+    log(format!("Edited user: {id}"), String::from("test"));
 }
 
 #[launch]
 fn rocket() -> _ {
-    log("Backend launched", "nA");
+    log(String::from("Backend launching :)"), String::from("system"));
     
     // this handels cors autorization (it took me 5 hours to fix this, frick this shit)
     let cors = CorsOptions {
@@ -188,7 +197,7 @@ fn rocket() -> _ {
         .mount("/", routes![edit_user])
 }
 
-fn log(event: &str, doer: &str) {
+fn log(event: String, doer: String) {
     let format_path = format!("{}/Logs/log.json", env!("CARGO_MANIFEST_DIR"));
     let path = format_path.as_str();
     let dt_string = Local::now().to_string();
@@ -200,7 +209,9 @@ fn log(event: &str, doer: &str) {
         json!({})
     };
 
-    data["log01"] = json!({
+    let log_name = format!("log_{}", dt);
+
+    data[log_name.as_str()] = json!({
         "datetime": dt,
         "event": event,
         "doer": doer

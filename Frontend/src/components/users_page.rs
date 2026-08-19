@@ -5,10 +5,7 @@ use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
 use web_sys::{window, HtmlInputElement, HtmlDocument};
 
-
 use wasm_bindgen::JsValue;
-
-
 
 // yes I know that this struct is a duplicate, and has to be updated twice,
 // please leave a complaint at goFrickYourself@gmail.com

@@ -6,6 +6,8 @@
 - [x] Editing users data
 - [x] Login with different users
 - [ ] Add log messages
+- [ ] Replace doer for logging
+- [ ] Implement log clearing for performance
 - [ ] Use cookies for a session
 - [x] Updating file paths to work on every system
 - [x] Sort users in id order in front end

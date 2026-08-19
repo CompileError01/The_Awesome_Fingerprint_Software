@@ -7,6 +7,7 @@ edition = "2024"
 chrono = "0.4.45"
 cookie = "0.18.2"
 json = "0.12.4"
+rand = "0.10.2"
 rocket = { version = "0.5.1", features = ["json", "secrets"] }
 rocket_cors = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
