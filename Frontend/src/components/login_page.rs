@@ -3,8 +3,9 @@ use yew::prelude::*;
 use yew::Callback;
 use web_sys::{HtmlInputElement};
 use wasm_bindgen_futures::spawn_local;
-use gloo_net::http::Request;
 
+use gloo_net::http::Request;
+use web_sys::RequestCredentials;
 
 // hashing
 use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::Salt};
@@ -69,12 +70,10 @@ pub fn login_page() -> Html {
 }
 
 async fn verify_login(username: String, password: String) -> u16 {
-    let client = reqwest::Client::new();
-
     let hash: PasswordHash<'static> = hash_password(password);
    
 
-    let response = Request::post("http://127.0.0.1:8000/verify-login")
+let response = Request::post("https://127.0.0.1:8000/verify-login")
         .credentials(web_sys::RequestCredentials::Include)
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")

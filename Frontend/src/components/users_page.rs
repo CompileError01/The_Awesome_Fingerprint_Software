@@ -19,28 +19,9 @@ struct User {
     email: String,
 }
 
-
-fn set_cookie(name: &str, value: &str) {
-    let Some(document) = window().and_then(|w| w.document()) else {
-        return;
-    };
-
-    let cookie = format!("{}={}; Path=/", name, value);
-
-    let _ = js_sys::Reflect::set(
-        &document,
-        &"cookie".into(),
-        &cookie.into(),
-    );
-}
-
-
-
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
 
-    set_cookie("test", "test");
-    
     // Holds all users returned by the API
     let mut users = use_state(Vec::<User>::new);
 
@@ -344,7 +325,7 @@ async fn fetch_data() -> Vec<User> {
     let client = reqwest::Client::new();
 
     let response = client
-        .get("http://127.0.0.1:8000/users-data")
+        .get("https://127.0.0.1:8000/users-data")
         .header("x-api-key", "valid_api_key")
         .send()
         .await
@@ -359,7 +340,7 @@ async fn add_user(id: u32, group: String, first_name: String, last_name: String,
     let client = reqwest::Client::new();
     
     client
-        .put(format!("http://127.0.0.1:8000/add-user/{id}"))
+        .put(format!("https://127.0.0.1:8000/add-user/{id}"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
@@ -379,7 +360,7 @@ async fn edit_user(id: u32, group: String, first_name: String, last_name: String
     let client = reqwest::Client::new();
     
     client
-        .post(format!("http://127.0.0.1:8000/edit-user/{id}"))
+        .post(format!("https://127.0.0.1:8000/edit-user/{id}"))
         .header("x-api-key", "valid_api_key")
         .header("Content-Type", "application/json")
         .body(format!(r#"{{
@@ -399,7 +380,7 @@ async fn delete_user(id: u32) {
     let client = reqwest::Client::new();
     
     client
-        .delete(format!("http://127.0.0.1:8000/delete-user/{id}"))
+        .delete(format!("https://127.0.0.1:8000/delete-user/{id}"))
         .header("x-api-key", "valid_api_key")
         .send()
         .await

@@ -1,10 +1,11 @@
 // needed by rocket
 #[macro_use]
 extern crate rocket;
+use cookie::prefix::Secure;
 use rocket::http::Status;
 use rocket::{data, launch};
 use rocket::request::{FromRequest, Outcome, Request};
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::{Cookie, CookieJar, SameSite};
 
 // CORS
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
@@ -105,6 +106,14 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
     
     if verification_successful {
 
+        cookies.add(
+                Cookie::build(("session", "abc123"))
+                    .path("/")
+                    .http_only(true)
+                    .secure(true)
+                    .same_site(SameSite::Lax)
+        );
+
         log(format!("Access Granted"), username);
         return Status::Ok;
     }
@@ -175,7 +184,9 @@ fn rocket() -> _ {
     
     // this handels cors autorization (it took me 5 hours to fix this, frick this shit)
     let cors = CorsOptions {
-        allowed_origins: AllowedOrigins::all(),
+        allowed_origins: AllowedOrigins::some_exact(&[
+            "https://127.0.0.1:8080",
+        ]),
         allowed_headers: AllowedHeaders::some(&[
             "Accept",
             "Authorization",

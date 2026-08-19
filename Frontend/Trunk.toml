@@ -1,0 +1,6 @@
+[serve]
+address = "127.0.0.1"
+port = 8080
+
+tls_key_path = "127.0.0.1+2-key.pem"
+tls_cert_path = "127.0.0.1+2.pem"
