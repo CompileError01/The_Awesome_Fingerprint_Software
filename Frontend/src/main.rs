@@ -36,17 +36,21 @@ pub enum AuthState {
 fn App() -> Html {
     let auth_state = use_state(|| AuthState::LoggedOut);
 
-    let mut backend_auth_state: u16 = 401;
-
     let value = auth_state.clone();
-    spawn_local(async move {
-        backend_auth_state = get_auth_state().await; 
+    use_effect_with((), move |_| {
+            spawn_local(async move {
+                let mut backend_auth_state: u16 = 401;
 
-        if backend_auth_state == 200 {
-            value.set(AuthState::LoggedIn);
-        }
-    });
-
+                let backend_auth_state = get_auth_state().await; 
+        
+                if backend_auth_state == 200 {
+                    value.set(AuthState::LoggedIn);
+                }
+            });
+    
+            || ()
+        });
+    
     let current_page = use_state(|| Pages::DashboardPage);
 
     let dashboard_page = {
