@@ -1,18 +1,18 @@
- - [ ] Implementing proper API-key handling
-- [ ] Improving security standards (https)
+- [x] Improving security standards (https)
 - [x] Listing users
 - [x] Adding users
 - [x] Deleting users
 - [x] Editing users data
 - [x] Login with different users
-- [ ] Add log messages
-- [ ] Replace doer for logging
+- [x] Add log messages
+- [ ] Replace doer for logging (maybe with cookies)
 - [ ] Implement log clearing for performance
-- [ ] Use cookies for a session
+- [x] Use cookies for a session
 - [x] Updating file paths to work on every system
 - [x] Sort users in id order in front end
+- [ ] Make Ip and port more changable more easily 
 - [ ] Integrate adding new fingerprint data into database
 - [ ] Proper Error handling
-- [ ] Make safeguards for adding user panel
+- [x] Make safeguards for adding user panel
 - [ ] Returning to the same page (after closing popups f.e. adding users)
 - [ ] Show success/error messages when a http request is sent to the back end

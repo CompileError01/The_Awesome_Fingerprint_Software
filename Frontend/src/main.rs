@@ -1,3 +1,6 @@
+use std::thread::spawn;
+
+use yew::platform::spawn_local;
 use yew::prelude::*;
 
 mod components;
@@ -7,10 +10,10 @@ use components::doors_page::DoorsPage;
 use components::log_page::LogPage;
 use components::users_page::UsersPage;
 
-/*struct PanelUser {
-    username: String,
-    passwordHash: String,
-}*/
+use reqwest::StatusCode;
+
+use gloo_net::http::Request;
+use web_sys::RequestCredentials;
 
 #[derive(Clone, PartialEq)]
 enum Pages {
@@ -32,7 +35,18 @@ pub enum AuthState {
 #[component]
 fn App() -> Html {
     let auth_state = use_state(|| AuthState::LoggedOut);
-    
+
+    let mut backend_auth_state: u16 = 401;
+
+    let value = auth_state.clone();
+    spawn_local(async move {
+        backend_auth_state = get_auth_state().await; 
+
+        if backend_auth_state == 200 {
+            value.set(AuthState::LoggedIn);
+        }
+    });
+
     let current_page = use_state(|| Pages::DashboardPage);
 
     let dashboard_page = {
@@ -90,4 +104,14 @@ fn App() -> Html {
 
 fn main() {
     yew::Renderer::<App>::new().render();
+}
+
+async fn get_auth_state() -> u16 {
+    let response = Request::get("https://127.0.0.1:8000/get-auth-state")
+            .credentials(web_sys::RequestCredentials::Include)
+            .send()
+            .await
+            .unwrap();
+    
+        response.status()
 }

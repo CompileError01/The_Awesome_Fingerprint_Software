@@ -12,7 +12,6 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::Salt};
 
 use crate::AuthState;
 
-
 #[function_component(LoginPage)]
 pub fn login_page() -> Html {
     
@@ -72,21 +71,20 @@ pub fn login_page() -> Html {
 async fn verify_login(username: String, password: String) -> u16 {
     let hash: PasswordHash<'static> = hash_password(password);
    
-
-let response = Request::post("https://127.0.0.1:8000/verify-login")
-        .credentials(web_sys::RequestCredentials::Include)
-        .header("Content-Type", "application/json")
-        .body(format!(r#"{{
-            "username": "{username}",
-            "passwordHash": "{hash}"
-            }}
-            "#))
-        .expect("wrong formatting!")
-        .send()
-        .await
-        .unwrap();
-
-    response.status()
+    let response = Request::post("https://127.0.0.1:8000/verify-login")
+            .credentials(web_sys::RequestCredentials::Include)
+            .header("Content-Type", "application/json")
+            .body(format!(r#"{{
+                "username": "{username}",
+                "passwordHash": "{hash}"
+                }}
+                "#))
+            .expect("wrong formatting!")
+            .send()
+            .await
+            .unwrap();
+    
+        response.status()
 }
 
 fn hash_password(password: String) -> PasswordHash<'static> {

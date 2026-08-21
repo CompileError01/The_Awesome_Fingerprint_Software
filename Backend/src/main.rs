@@ -3,6 +3,7 @@
 extern crate rocket;
 use cookie::prefix::Secure;
 use rocket::http::Status;
+use rocket::tokio::time;
 use rocket::{data, launch};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::http::{Cookie, CookieJar, SameSite};
@@ -22,6 +23,7 @@ use serde_json::{Value, json};
 // for date and time
 use chrono::{DateTime, Local};
 
+use std::time::Duration;
 
 struct ApiKey<'r>(&'r str);
 
@@ -55,23 +57,19 @@ struct User {
     email: String,
 }
 
+#[get("/get-auth-state")]
+fn get_auth_state(cookies: &CookieJar<'_>) -> Status {
+    let session = match cookies.get_private("session") {
+        Some(cookie) => cookie.value().to_string(),
+        None => return Status::Unauthorized
+    };
 
-/*#[rocket::async_trait]
-impl<'r> FromRequest<'r> for ApiKey<'r> {
-    type Error = ApiKeyError;
-
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        fn is_valid(key: &str) -> bool {
-            key == "valid_api_key"
-        }
-
-        match req.headers().get_one("x-api-key") {
-            None => Outcome::Error((Status::BadRequest, ApiKeyError::Missing)),
-            Some(key) if is_valid(key) => Outcome::Success(ApiKey(key)),
-            Some(_) => Outcome::Error((Status::Unauthorized, ApiKeyError::Invalid)),
-        }
+    if session == "valid_session_cookie" {
+        return Status::Ok;
     }
-}*/
+
+    Status::Unauthorized
+}
 
 #[post("/verify-login", data="<data>")]
 fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
@@ -106,6 +104,7 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
                     .http_only(true)
                     .secure(true)
                     .same_site(SameSite::Lax)
+                    .max_age(cookie::time::Duration::seconds(2 * 60 * 60)) // i know that this is complete bs
         );
 
         log(format!("Access Granted"), username);
@@ -237,6 +236,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .attach(cors)
+        .mount("/", routes![get_auth_state])
         .mount("/", routes![verify_login])
         .mount("/", routes![users_data])
         .mount("/", routes![add_user])
