@@ -6,6 +6,7 @@
 - [x] Login with different users
 - [x] Add log messages
 - [ ] Replace doer for logging (maybe with cookies)
+- [ ] Stop dos attacking myself
 - [ ] Implement log clearing for performance
 - [x] Use cookies for a session
 - [x] Updating file paths to work on every system

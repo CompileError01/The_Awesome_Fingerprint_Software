@@ -104,7 +104,16 @@ fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
                     .http_only(true)
                     .secure(true)
                     .same_site(SameSite::Lax)
-                    .max_age(cookie::time::Duration::seconds(2 * 60 * 60)) // i know that this is complete bs
+                    .max_age(cookie::time::Duration::seconds(60 * 60)) // i know that this is complete bs
+        );
+
+        cookies.add_private(
+            Cookie::build(("doer", username.clone()))
+                .path("/")
+                .http_only(true)
+                .secure(true)
+                .same_site(SameSite::Lax)
+                .max_age(cookie::time::Duration::seconds(60 * 60))
         );
 
         log(format!("Access Granted"), username);
@@ -168,7 +177,7 @@ async fn add_user(id: String, user: Json<User>, cookies: &CookieJar<'_>) -> Stat
 
     fs::write(path, json).unwrap();
 
-    log(format!("Added user: {id}"), String::from("test"));
+    log(format!("Added user: {id}"), get_doer(cookies));
 
     return Status::Ok;
 }
@@ -186,7 +195,7 @@ async fn delete_user(id: u32, cookies: &CookieJar<'_>) -> Status{
     
     fs::remove_file(format!("{}/../Database/Users/{}.json", env!("CARGO_MANIFEST_DIR"), id)).unwrap();
 
-    log(format!("Deleted user: {id}"), String::from("test"));
+    log(format!("Deleted user: {id}"), get_doer(cookies));
 
     return Status::Ok;
 }
@@ -209,7 +218,7 @@ async fn edit_user(id: u32, user: Json<User>, cookies: &CookieJar<'_>) -> Status
 
     fs::write(path, json).unwrap();
 
-    log(format!("Edited user: {id}"), String::from("test"));
+    log(format!("Edited user: {id}"), get_doer(cookies));
 
     return Status::Ok;
 }
@@ -266,6 +275,15 @@ fn log(event: String, doer: String) {
     });
 
     fs::write(path, serde_json::to_string_pretty(&data).unwrap()).unwrap();
+}
+
+fn get_doer(cookies: &CookieJar<'_>) -> String {
+    let session = match cookies.get_private("doer") {
+           Some(cookie) => cookie.value().to_string(),
+           None => return String::from("")
+    };
+
+    session
 }
 
 fn get_users_file_names() -> Vec<PathBuf> {
