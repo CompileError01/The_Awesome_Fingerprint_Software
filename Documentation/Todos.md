@@ -15,5 +15,5 @@
 - [ ] Integrate adding new fingerprint data into database
 - [ ] Proper Error handling
 - [x] Make safeguards for adding user panel
-- [ ] Returning to the same page (after closing popups f.e. adding users)
+- [ ] Reloading and returning to the same page
 - [ ] Show success/error messages when a http request is sent to the back end

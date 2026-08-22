@@ -1,4 +1,0 @@
-[workspace]
-members = ["common", "server", "client"]
-resolver = "2"
-rustls = { version = "0.21", features = ["dangerous_configuration"] }

@@ -1,5 +1,0 @@
-# IP to bind on. 0.0.0.0 means "listen on every network interface".
-ip = "0.0.0.0"
-port = 9000
-# Folder that gets shared with all clients. Created automatically if missing.
-sync_folder = "shared"
