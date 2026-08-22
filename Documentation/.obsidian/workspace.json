@@ -41,12 +41,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Todos.md",
+                "file": "Database.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Todos"
+              "title": "Database"
             }
           }
         ],
@@ -217,13 +217,13 @@
   },
   "active": "8a83c9a83b67775e",
   "lastOpenFiles": [
-    "Post it notes.md",
+    "Frontend.md",
     "Todos.md",
+    "Post it notes.md",
     "Hashing.md",
     "Event reactions.md",
     "Database.md",
     "Requirements.md",
-    "Frontend.md",
     "Welcome.md"
   ]
 }
