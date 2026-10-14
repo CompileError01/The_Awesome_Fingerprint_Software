@@ -6,13 +6,3 @@ debounce_ms = 500
 name = "pi-02"
 address = "pi@192.168.1.102"
 destination = "/home/pi/Database"
-
-[[replicas]]
-name = "pi-03"
-address = "pi@192.168.1.103"
-destination = "/home/pi/Database"
-
-[[replicas]]
-name = "pi-04"
-address = "pi@192.168.1.104"
-destination = "/home/pi/Database"

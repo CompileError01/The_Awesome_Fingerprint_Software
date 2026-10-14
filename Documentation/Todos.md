@@ -17,3 +17,8 @@
 - [x] Make safeguards for adding user panel
 - [ ] Reloading and returning to the same page
 - [ ] Show success/error messages when a http request is sent to the back end
+- [ ] make default door for fingerprint enrollment so fritz stops complaining
+- [ ] remove email
+- [ ] re purpose deleted ids so fritz stops complaining
+- [ ] add flags for different kinds of groups f.e. admin, group leader
+- [ ] add expiration date for users

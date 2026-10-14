@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "name": "Front Door",
+  "status": "Closed",
+  "ip_addr": "192.168.1.145",
+  "description": "Front door"
+}
