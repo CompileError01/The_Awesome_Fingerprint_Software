@@ -15,7 +15,7 @@
 - [ ] Integrate adding new fingerprint data into database
 - [ ] Proper Error handling
 - [x] Make safeguards for adding user panel
-- [ ] Reloading and returning to the same page
+- [x] Reloading and returning to the same page
 - [ ] Show success/error messages when a http request is sent to the back end
 - [ ] make default door for fingerprint enrollment so fritz stops complaining
 - [ ] remove email

@@ -1,7 +1,0 @@
-[default]
-address = "127.0.0.1"
-port = 8000
-
-[default.tls]
-certs = "127.0.0.1+2.pem"
-key = "127.0.0.1+2-key.pem"
