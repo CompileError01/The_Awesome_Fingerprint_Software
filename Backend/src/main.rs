@@ -3,52 +3,91 @@ extern crate rocket;
 
 mod doors;
 
+use rocket::fs::TempFile;
 use rocket::http::{Cookie, CookieJar, SameSite, Status};
 use rocket::serde::json::Json;
-use rocket::tokio;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use rocket::fs::TempFile;
-
 use serde::{Deserialize, Serialize};
-
-use std::fmt::format;
 use std::fs;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct PanelUser {
     username: String,
-    passwordHash: String,
+    password_hash: String,
 }
 
-// Schedule for a single weekday. Used inside DoorAccess::schedule,
-// index 0 = Monday ... index 6 = Sunday.
-// yes I know that this struct is a duplicate, and has to be updated twice,
-// please leave a complaint at goFrickYourself@gmail.com
-// also has to be UPDATED in the FRONTEND
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct DaySchedule {
+    #[serde(default)]
     enabled: bool,
+    #[serde(default = "default_start")]
     start: String,
+    #[serde(default = "default_end")]
     end: String,
 }
 
+impl Default for DaySchedule {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            start: default_start(),
+            end: default_end(),
+        }
+    }
+}
+
+fn default_start() -> String {
+    "09:00".to_string()
+}
+
+fn default_end() -> String {
+    "17:00".to_string()
+}
+
+fn default_schedule() -> [DaySchedule; 7] {
+    std::array::from_fn(|_| DaySchedule::default())
+}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct DoorAccess {
+    #[serde(alias = "doorId")]
     door_id: u32,
+
+    #[serde(default, alias = "alwaysAllowed")]
+    always_allowed: bool,
+
+    #[serde(default = "default_schedule")]
     schedule: [DaySchedule; 7],
 }
 
-// yes I know that this struct is a duplicate, and has to be updated twice,
-// please leave a complaint at goFrickYourself@gmail.com
-// also has to be UPDATED in the FRONTEND
-#[derive(Serialize, Deserialize, Debug)]
+fn default_schedule() -> [DaySchedule; 7] {
+    std::array::from_fn(|_| DaySchedule::default())
+}
+
+impl DoorAccess {
+    fn new(door_id: u32) -> Self {
+        Self {
+            door_id,
+            always_allowed: false,
+            schedule: default_schedule(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct User {
     id: u32,
-    group: String,
-    firstName: String,
-    lastName: String,
-    email: String,
+    #[serde(rename = "firstName", alias = "first_name")]
+    first_name: String,
+    #[serde(rename = "lastName", alias = "last_name")]
+    last_name: String,
+    #[serde(default)]
+    is_admin: bool,
+    #[serde(default)]
+    is_group_leader: bool,
+    #[serde(default)]
+    expires_on: Option<String>,
     #[serde(default)]
     door_access: Vec<DoorAccess>,
     #[serde(default)]
@@ -57,12 +96,7 @@ struct User {
 
 #[get("/get-auth-state")]
 fn get_auth_state(cookies: &CookieJar<'_>) -> Status {
-    let session = match cookies.get_private("session") {
-        Some(cookie) => cookie.value().to_string(),
-        None => return Status::Unauthorized,
-    };
-
-    if session == "valid_session_cookie" {
+    if check_session(cookies).is_ok() {
         Status::Ok
     } else {
         Status::Unauthorized
@@ -70,16 +104,11 @@ fn get_auth_state(cookies: &CookieJar<'_>) -> Status {
 }
 
 #[post("/verify-login", data = "<data>")]
-fn verify_login(
-    data: Json<PanelUser>,
-    cookies: &CookieJar<'_>,
-) -> Status {
+fn verify_login(data: Json<PanelUser>, cookies: &CookieJar<'_>) -> Status {
     let username = data.username.clone();
-    let password_hash = data.passwordHash.clone();
+    let password_hash = data.password_hash.clone();
 
-    let panel_users = get_panel_users_file_names();
-
-    for user_file in panel_users {
+    for user_file in get_panel_users_file_names() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("PanelUsers")
             .join(user_file);
@@ -94,77 +123,59 @@ fn verify_login(
             Err(_) => continue,
         };
 
-        if username == user.username && password_hash == user.passwordHash {
-            cookies.add_private(
-                Cookie::build(("session", "valid_session_cookie"))
-                    .path("/")
-                    .http_only(true)
-                    .secure(true)
-                    .same_site(SameSite::Lax)
-                    .max_age(cookie::time::Duration::seconds(60 * 60)),
-            );
+        if username == user.username && password_hash == user.password_hash {
+            let cookie = Cookie::build(("session", "valid_session_cookie"))
+                .path("/")
+                .http_only(true)
+                .secure(true)
+                .same_site(SameSite::Lax)
+                .max_age(cookie::time::Duration::seconds(60 * 60));
 
-            cookies.add_private(
-                Cookie::build(("doer", username.clone()))
-                    .path("/")
-                    .http_only(true)
-                    .secure(true)
-                    .same_site(SameSite::Lax)
-                    .max_age(cookie::time::Duration::seconds(60 * 60)),
-            );
+            cookies.add_private(cookie);
+
+            let doer_cookie = Cookie::build(("doer", username.clone()))
+                .path("/")
+                .http_only(true)
+                .secure(true)
+                .same_site(SameSite::Lax)
+                .max_age(cookie::time::Duration::seconds(60 * 60));
+
+            cookies.add_private(doer_cookie);
 
             log("Access Granted".to_string(), username);
-
             return Status::Ok;
         }
     }
 
     log("Access Denied".to_string(), username);
-
     Status::Unauthorized
 }
 
 #[get("/users-data")]
-fn users_data(
-    cookies: &CookieJar<'_>,
-) -> Result<Json<Vec<User>>, Status> {
+fn users_data(cookies: &CookieJar<'_>) -> Result<Json<Vec<User>>, Status> {
     check_session(cookies)?;
 
-    let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("Database")
-        .join("Users");
-
-    let entries = match fs::read_dir(&directory) {
-        Ok(entries) => entries,
-        Err(_) => return Err(Status::InternalServerError),
-    };
+    let directory = users_directory();
+    let entries =
+        fs::read_dir(&directory).map_err(|_| Status::InternalServerError)?;
 
     let mut users = Vec::<User>::new();
 
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(_) => continue,
-        };
-
+    for entry in entries.flatten() {
         let path = entry.path();
 
         if path.extension().and_then(|x| x.to_str()) != Some("json") {
             continue;
         }
 
-        let file_content = match fs::read_to_string(path) {
-            Ok(content) => content,
+        let content = match fs::read_to_string(path) {
+            Ok(value) => value,
             Err(_) => continue,
         };
 
-        let user = match serde_json::from_str::<User>(&file_content) {
-            Ok(user) => user,
-            Err(_) => continue,
-        };
-
-        users.push(user);
+        if let Ok(user) = serde_json::from_str::<User>(&content) {
+            users.push(user);
+        }
     }
 
     users.sort_by_key(|user| user.id);
@@ -173,7 +184,7 @@ fn users_data(
 }
 
 #[put("/add-user/<id>", data = "<user>")]
-async fn add_user(
+fn add_user(
     id: u32,
     user: Json<User>,
     cookies: &CookieJar<'_>,
@@ -182,27 +193,24 @@ async fn add_user(
         return status;
     }
 
-    if user.id != id {
+    if id == 0 || user.id != id {
         return Status::BadRequest;
     }
 
-    let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("Database")
-        .join("Users");
+    let directory = users_directory();
 
     if fs::create_dir_all(&directory).is_err() {
         return Status::InternalServerError;
     }
 
-    let path = directory.join(format!("{}.json", id));
+    let path = directory.join(format!("{id}.json"));
 
     if path.exists() {
         return Status::Conflict;
     }
 
     let json = match serde_json::to_string_pretty(&*user) {
-        Ok(json) => json,
+        Ok(value) => value,
         Err(_) => return Status::InternalServerError,
     };
 
@@ -210,51 +218,37 @@ async fn add_user(
         return Status::InternalServerError;
     }
 
-    log(
-        format!("Added user: {}", id),
-        get_doer(cookies),
-    );
+    log(format!("Added user: {id}"), get_doer(cookies));
 
     Status::Ok
 }
 
 #[delete("/delete-user/<id>")]
-async fn delete_user(
-    id: u32,
-    cookies: &CookieJar<'_>,
-) -> Status {
+fn delete_user(id: u32, cookies: &CookieJar<'_>) -> Status {
     if let Err(status) = check_session(cookies) {
         return status;
     }
 
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("Database")
-        .join("Users")
-        .join(format!("{}.json", id));
+    let directory = users_directory();
+    let path = directory.join(format!("{id}.json"));
 
     match fs::remove_file(path) {
         Ok(_) => {
-            log(
-                format!("Deleted user: {}", id),
-                get_doer(cookies),
-            );
+            let _ = fs::remove_file(directory.join(format!("{id}.bin")));
+
+            log(format!("Deleted user: {id}"), get_doer(cookies));
 
             Status::Ok
         }
-
-        Err(error) => {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                Status::NotFound
-            } else {
-                Status::InternalServerError
-            }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Status::NotFound
         }
+        Err(_) => Status::InternalServerError,
     }
 }
 
 #[post("/edit-user/<id>", data = "<user>")]
-async fn edit_user(
+fn edit_user(
     id: u32,
     user: Json<User>,
     cookies: &CookieJar<'_>,
@@ -263,27 +257,19 @@ async fn edit_user(
         return status;
     }
 
-    if user.id != id {
+    if user.id != id || id == 0 {
         return Status::BadRequest;
     }
 
-    let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("Database")
-        .join("Users");
-
-    if fs::create_dir_all(&directory).is_err() {
-        return Status::InternalServerError;
-    }
-
-    let path = directory.join(format!("{}.json", id));
+    let directory = users_directory();
+    let path = directory.join(format!("{id}.json"));
 
     if !path.exists() {
         return Status::NotFound;
     }
 
     let json = match serde_json::to_string_pretty(&*user) {
-        Ok(json) => json,
+        Ok(value) => value,
         Err(_) => return Status::InternalServerError,
     };
 
@@ -291,65 +277,78 @@ async fn edit_user(
         return Status::InternalServerError;
     }
 
-    log(
-        format!("Edited user: {}", id),
-        get_doer(cookies),
-    );
+    log(format!("Edited user: {id}"), get_doer(cookies));
 
     Status::Ok
 }
 
 #[post("/enroll-finished/<id>", data = "<fingerprint_file>")]
-async fn enroll_finished(mut fingerprint_file: TempFile<'_>, id: u32) {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+async fn enroll_finished(
+    mut fingerprint_file: TempFile<'_>,
+    id: u32,
+) -> Status {
+    let directory = users_directory();
+
+    if !directory.join(format!("{id}.json")).exists() {
+        return Status::NotFound;
+    }
+
+    let path = directory.join(format!("{id}.bin"));
+
+    match fingerprint_file.copy_to(path).await {
+        Ok(_) => {
+            log(
+                format!("Fingerprint enrolled for user: {id}"),
+                "Door controller".to_string(),
+            );
+
+            Status::Ok
+        }
+        Err(_) => Status::InternalServerError,
+    }
+}
+
+fn users_directory() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("Database")
         .join("Users")
-        .join(format!("{}.bin", id));
-    
-    fingerprint_file.copy_to(path).await.unwrap();
 }
 
-fn check_session(
-    cookies: &CookieJar<'_>,
-) -> Result<(), Status> {
-    let session = match cookies.get_private("session") {
-        Some(cookie) => cookie.value().to_string(),
-        None => return Err(Status::Unauthorized),
-    };
-
-    if session != "valid_session_cookie" {
-        return Err(Status::Unauthorized);
-    }
-
-    Ok(())
-}
-
-pub fn get_doer(
-    cookies: &CookieJar<'_>,
-) -> String {
-    match cookies.get_private("doer") {
-        Some(cookie) => cookie.value().to_string(),
-        None => "Unknown".to_string(),
+fn check_session(cookies: &CookieJar<'_>) -> Result<(), Status> {
+    match cookies.get_private("session") {
+        Some(cookie) if cookie.value() == "valid_session_cookie" => Ok(()),
+        _ => Err(Status::Unauthorized),
     }
 }
 
-pub fn log(
-    event: String,
-    doer: String,
-) {
-    println!("[{}] {} - {}", chrono::Local::now(), doer, event);
+fn get_doer(cookies: &CookieJar<'_>) -> String {
+    cookies
+        .get_private("doer")
+        .map(|cookie| cookie.value().to_string())
+        .unwrap_or_else(|| "Unknown".to_string())
+}
+
+fn log(event: String, doer: String) {
+    println!(
+        "[{}] {} - {}",
+        chrono::Local::now(),
+        doer,
+        event
+    );
 }
 
 fn get_panel_users_file_names() -> Vec<PathBuf> {
-    let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("PanelUsers");
+    let directory =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("PanelUsers");
 
     match fs::read_dir(directory) {
         Ok(entries) => entries
-            .filter_map(|entry| entry.ok())
+            .flatten()
             .map(|entry| entry.path())
-            .filter(|path| path.extension().and_then(|x| x.to_str()) == Some("json"))
+            .filter(|path| {
+                path.extension().and_then(|x| x.to_str()) == Some("json")
+            })
             .filter_map(|path| path.file_name().map(PathBuf::from))
             .collect(),
         Err(_) => Vec::new(),
@@ -381,7 +380,7 @@ fn rocket() -> _ {
                 doors::doors_data,
                 doors::add_door_route,
                 doors::delete_door_route,
-                enroll_finished
+                enroll_finished,
             ],
         )
 }
