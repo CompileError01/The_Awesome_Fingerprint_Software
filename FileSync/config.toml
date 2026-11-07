@@ -1,8 +1,0 @@
-database = "/run/media/prsn/128Gb/FingerprintSystem"
-
-debounce_ms = 500
-
-[[replicas]]
-name = "pi-02"
-address = "pi@192.168.1.102"
-destination = "/home/pi/Database"

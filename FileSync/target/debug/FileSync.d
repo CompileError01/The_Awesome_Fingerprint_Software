@@ -1,1 +1,0 @@
-/run/media/prsn/128Gb/FingerprintSystem/FileSync/target/debug/FileSync: /run/media/prsn/128Gb/FingerprintSystem/FileSync/src/config.rs /run/media/prsn/128Gb/FingerprintSystem/FileSync/src/copier.rs /run/media/prsn/128Gb/FingerprintSystem/FileSync/src/main.rs /run/media/prsn/128Gb/FingerprintSystem/FileSync/src/watcher.rs
