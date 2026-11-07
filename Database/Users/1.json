@@ -1,0 +1,52 @@
+{
+  "id": 1,
+  "firstName": "max",
+  "lastName": "mustermann",
+  "isAdmin": false,
+  "isGroupLeader": true,
+  "expiresOn": "2026-10-31",
+  "doorAccess": [
+    {
+      "doorId": 2,
+      "alwaysAllowed": true,
+      "schedule": [
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ]
+    }
+  ],
+  "fingerprint": ""
+}

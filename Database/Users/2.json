@@ -1,0 +1,93 @@
+{
+  "id": 2,
+  "firstName": "jon",
+  "lastName": "doe",
+  "isAdmin": false,
+  "isGroupLeader": true,
+  "expiresOn": null,
+  "doorAccess": [
+    {
+      "doorId": 1,
+      "alwaysAllowed": false,
+      "schedule": [
+        {
+          "enabled": true,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": true,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ]
+    },
+    {
+      "doorId": 2,
+      "alwaysAllowed": true,
+      "schedule": [
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ]
+    }
+  ],
+  "fingerprint": ""
+}

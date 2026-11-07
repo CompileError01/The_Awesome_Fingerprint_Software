@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
 use web_sys::{window, HtmlInputElement, HtmlSelectElement};
 
-
 use gloo_net::http::Request;
 
 const DAY_NAMES: [&str; 7] = [
@@ -19,31 +18,47 @@ const DAY_NAMES: [&str; 7] = [
     "Sunday",
 ];
 
-// Schedule for a single weekday. Lives inside DoorAccess::schedule,
-// index 0 = Monday ... index 6 = Sunday.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct DaySchedule {
+    #[serde(default)]
     enabled: bool,
+    #[serde(default = "default_start_time")]
     start: String,
+    #[serde(default = "default_end_time")]
     end: String,
+}
+
+fn default_start_time() -> String {
+    "09:00".to_string()
+}
+
+fn default_end_time() -> String {
+    "17:00".to_string()
 }
 
 impl Default for DaySchedule {
     fn default() -> Self {
         DaySchedule {
             enabled: false,
-            start: "09:00".to_string(),
-            end: "17:00".to_string(),
+            start: default_start_time(),
+            end: default_end_time(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 struct DoorAccess {
+    #[serde(alias = "door_id")]
     door_id: u32,
-    #[serde(default)]
+    #[serde(default, alias = "always_allowed")]
     always_allowed: bool,
+    #[serde(default = "default_schedule")]
     schedule: [DaySchedule; 7],
+}
+
+fn default_schedule() -> [DaySchedule; 7] {
+    std::array::from_fn(|_| DaySchedule::default())
 }
 
 impl DoorAccess {
@@ -56,9 +71,6 @@ impl DoorAccess {
     }
 }
 
-// A trimmed-down view of a Door, just enough to list doors and reach
-// their fingerprint reader. Kept separate from doors_page.rs's own
-// Door struct (same duplication situation as User, see below).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct DoorOption {
     id: u32,
@@ -67,21 +79,21 @@ struct DoorOption {
     ip_addr: String,
 }
 
-// yes I know that this struct is a duplicate, and has to be updated twice,
-// please leave a complaint at goFrickYourself@gmail.com
-// also has to be UPDATED in the BACKEND
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 struct User {
     id: u32,
-    firstName: String,
-    lastName: String,
-    #[serde(default)]
+    #[serde(alias = "first_name")]
+    first_name: String,
+    #[serde(alias = "last_name")]
+    last_name: String,
+    #[serde(default, alias = "is_admin")]
     is_admin: bool,
-    #[serde(default)]
+    #[serde(default, alias = "is_group_leader")]
     is_group_leader: bool,
-    #[serde(default)]
+    #[serde(default, alias = "expires_on")]
     expires_on: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "door_access")]
     door_access: Vec<DoorAccess>,
     #[serde(default)]
     fingerprint: String,
@@ -89,11 +101,8 @@ struct User {
 
 #[function_component(UsersPage)]
 pub fn users_page() -> Html {
-
-    // Holds all users returned by the API
     let users = use_state(Vec::<User>::new);
 
-    // gets all the user data from the api and sorts it by id
     {
         let users = users.clone();
 
@@ -106,8 +115,6 @@ pub fn users_page() -> Html {
         });
     }
 
-    // Holds all doors, so we can list them for door-access assignment
-    // and for picking which door's reader to scan a fingerprint from.
     let doors = use_state(Vec::<DoorOption>::new);
 
     {
@@ -123,8 +130,6 @@ pub fn users_page() -> Html {
         });
     }
 
-
-    // For adding users
     let latest_id: u32 = find_available_id(&users);
 
     let show_add_panel = use_state(|| false);
@@ -141,17 +146,11 @@ pub fn users_page() -> Html {
     let group_leader_input_ref_cb = group_leader_input_ref.clone();
     let expiration_input_ref_cb = expiration_input_ref.clone();
 
-    // Door access being built/edited in whichever panel is open, plus
-    // the fingerprint captured for that panel. Both get reset/pre-filled
-    // by open_add_panel / open_edit_panel below.
     let door_access_list = use_state(Vec::<DoorAccess>::new);
     let fingerprint_data = use_state(String::new);
     let fingerprint_user_id = use_state(|| 1u32);
 
-    // For picking which door to add access for
     let new_door_select_ref = use_node_ref();
-
-    // For picking which door's reader to scan a fingerprint from
     let fingerprint_door_select_ref = use_node_ref();
 
     let open_add_panel = {
@@ -173,10 +172,7 @@ pub fn users_page() -> Html {
         Callback::from(move |_| show_add_panel.set(false))
     };
 
-
-    // For editing users
     let show_edit_panel = use_state(|| false);
-
     let id_from_table = use_state(|| 0u32);
 
     let open_edit_panel = {
@@ -211,8 +207,6 @@ pub fn users_page() -> Html {
     let group_leader_input_ref_cb_clone = group_leader_input_ref_cb.clone();
     let expiration_input_ref_cb_clone = expiration_input_ref_cb.clone();
 
-    // Adds a DoorAccess entry for whichever door is picked in the
-    // "add door access" select.
     let add_door_access_event = {
         let door_access_list = door_access_list.clone();
         let new_door_select_ref = new_door_select_ref.clone();
@@ -238,7 +232,6 @@ pub fn users_page() -> Html {
         let users = users.clone();
 
         Callback::from(move |_| {
-
             let first_name_input_ref = first_name_input_ref_cb.clone();
             let last_name_input_ref = last_name_input_ref_cb.clone();
             let admin_input_ref = admin_input_ref_cb.clone();
@@ -247,15 +240,29 @@ pub fn users_page() -> Html {
             let users = users.clone();
 
             let id = latest_id;
-            let first_name = first_name_input_ref.cast::<HtmlInputElement>()
-                .map(|input| input.value().trim().to_string()).unwrap_or_default();
-            let last_name = last_name_input_ref.cast::<HtmlInputElement>()
-                .map(|input| input.value().trim().to_string()).unwrap_or_default();
-            let is_admin = admin_input_ref.cast::<HtmlInputElement>()
-                .map(|input| input.checked()).unwrap_or(false);
-            let is_group_leader = group_leader_input_ref.cast::<HtmlInputElement>()
-                .map(|input| input.checked()).unwrap_or(false);
-            let expires_on = expiration_input_ref.cast::<HtmlInputElement>()
+
+            let first_name = first_name_input_ref
+                .cast::<HtmlInputElement>()
+                .map(|input| input.value().trim().to_string())
+                .unwrap_or_default();
+
+            let last_name = last_name_input_ref
+                .cast::<HtmlInputElement>()
+                .map(|input| input.value().trim().to_string())
+                .unwrap_or_default();
+
+            let is_admin = admin_input_ref
+                .cast::<HtmlInputElement>()
+                .map(|input| input.checked())
+                .unwrap_or(false);
+
+            let is_group_leader = group_leader_input_ref
+                .cast::<HtmlInputElement>()
+                .map(|input| input.checked())
+                .unwrap_or(false);
+
+            let expires_on = expiration_input_ref
+                .cast::<HtmlInputElement>()
                 .map(|input| input.value())
                 .filter(|value| !value.is_empty());
 
@@ -264,21 +271,38 @@ pub fn users_page() -> Html {
                 let fingerprint = (*fingerprint_data).clone();
 
                 spawn_local(async move {
-                    let result = add_user(id, first_name, last_name, is_admin, is_group_leader,
-                                          expires_on, door_access, fingerprint).await;
+                    let result = add_user(
+                        id,
+                        first_name,
+                        last_name,
+                        is_admin,
+                        is_group_leader,
+                        expires_on,
+                        door_access,
+                        fingerprint,
+                    )
+                    .await;
+
                     if result {
                         refresh_users(users).await;
                     } else {
-                        window().unwrap().alert_with_message("Could not add user. The ID may already exist or the server rejected the request.").ok();
+                        window()
+                            .unwrap()
+                            .alert_with_message(
+                                "Could not add user. The ID may already exist or the server rejected the request.",
+                            )
+                            .ok();
                     }
                 });
 
-                show_add_panel.set(false)
+                show_add_panel.set(false);
             } else {
-                window().unwrap().alert_with_message("First and last name are required.").ok();
+                window()
+                    .unwrap()
+                    .alert_with_message("First and last name are required.")
+                    .ok();
             }
         })
-
     };
 
     let delete_user_button_event = {
@@ -295,8 +319,12 @@ pub fn users_page() -> Html {
             if confirmed {
                 spawn_local(async move {
                     if !delete_user(id).await {
-                        window().unwrap().alert_with_message("Could not delete user.").ok();
+                        window()
+                            .unwrap()
+                            .alert_with_message("Could not delete user.")
+                            .ok();
                     }
+
                     refresh_users(users).await;
                 });
             }
@@ -311,20 +339,37 @@ pub fn users_page() -> Html {
         let users = users.clone();
 
         Callback::from(move |_| {
-            let first_name = first_name_input_ref_cb_clone.cast::<HtmlInputElement>()
-                .map(|input| input.value().trim().to_string()).unwrap_or_default();
-            let last_name = last_name_input_ref_cb_clone.cast::<HtmlInputElement>()
-                .map(|input| input.value().trim().to_string()).unwrap_or_default();
-            let is_admin = admin_input_ref_cb_clone.cast::<HtmlInputElement>()
-                .map(|input| input.checked()).unwrap_or(false);
-            let is_group_leader = group_leader_input_ref_cb_clone.cast::<HtmlInputElement>()
-                .map(|input| input.checked()).unwrap_or(false);
-            let expires_on = expiration_input_ref_cb_clone.cast::<HtmlInputElement>()
+            let first_name = first_name_input_ref_cb_clone
+                .cast::<HtmlInputElement>()
+                .map(|input| input.value().trim().to_string())
+                .unwrap_or_default();
+
+            let last_name = last_name_input_ref_cb_clone
+                .cast::<HtmlInputElement>()
+                .map(|input| input.value().trim().to_string())
+                .unwrap_or_default();
+
+            let is_admin = admin_input_ref_cb_clone
+                .cast::<HtmlInputElement>()
+                .map(|input| input.checked())
+                .unwrap_or(false);
+
+            let is_group_leader = group_leader_input_ref_cb_clone
+                .cast::<HtmlInputElement>()
+                .map(|input| input.checked())
+                .unwrap_or(false);
+
+            let expires_on = expiration_input_ref_cb_clone
+                .cast::<HtmlInputElement>()
                 .map(|input| input.value())
                 .filter(|value| !value.is_empty());
 
             if first_name.is_empty() || last_name.is_empty() {
-                window().unwrap().alert_with_message("First and last name are required.").ok();
+                window()
+                    .unwrap()
+                    .alert_with_message("First and last name are required.")
+                    .ok();
+
                 return;
             }
 
@@ -333,12 +378,25 @@ pub fn users_page() -> Html {
             let users = users.clone();
 
             spawn_local(async move {
-                let result = edit_user(id, first_name, last_name, is_admin, is_group_leader,
-                                       expires_on, door_access, fingerprint).await;
+                let result = edit_user(
+                    id,
+                    first_name,
+                    last_name,
+                    is_admin,
+                    is_group_leader,
+                    expires_on,
+                    door_access,
+                    fingerprint,
+                )
+                .await;
+
                 if result {
                     refresh_users(users).await;
                 } else {
-                    window().unwrap().alert_with_message("Could not save user changes.").ok();
+                    window()
+                        .unwrap()
+                        .alert_with_message("Could not save user changes.")
+                        .ok();
                 }
             });
 
@@ -347,17 +405,15 @@ pub fn users_page() -> Html {
     };
 
     let get_new_fingerprint_button_event = {
-        let fingerprint_data = fingerprint_data.clone();
         let fingerprint_door_select_ref = fingerprint_door_select_ref.clone();
         let doors = doors.clone();
         let user_id = *fingerprint_user_id;
 
         Callback::from(move |_| {
-            let fingerprint_data = fingerprint_data.clone();
-
             let selected_id = fingerprint_door_select_ref
                 .cast::<HtmlSelectElement>()
                 .and_then(|select| select.value().parse::<u32>().ok());
+
             let door_ip = selected_id
                 .and_then(|door_id| doors.iter().find(|door| door.id == door_id))
                 .or_else(|| doors.first())
@@ -367,7 +423,12 @@ pub fn users_page() -> Html {
                 Some(door_ip) => {
                     spawn_local(async move {
                         if let Err(error) = get_new_fingerprint(&door_ip, user_id).await {
-                            window().unwrap().alert_with_message(&format!("Fingerprint enrollment request failed: {error}")).ok();
+                            window()
+                                .unwrap()
+                                .alert_with_message(&format!(
+                                    "Fingerprint enrollment request failed: {error}"
+                                ))
+                                .ok();
                         }
                     });
                 }
@@ -381,41 +442,30 @@ pub fn users_page() -> Html {
         })
     };
 
-    // Doors that don't already have a DoorAccess entry, for the
-    // "add door access" select.
     let available_doors: Vec<DoorOption> = doors
         .iter()
-        .filter(|door| !door_access_list.iter().any(|access| access.door_id == door.id))
+        .filter(|door| {
+            !door_access_list
+                .iter()
+                .any(|access| access.door_id == door.id)
+        })
         .cloned()
         .collect();
 
-    // The door-access editor: one block per door already assigned, each
-    // with a Monday-Sunday enabled/start/end row, plus a picker to add
-    // another door. Built once and reused in both the add and edit panels.
     let door_access_section: Html = html! {
         <div class="door-access-editor">
             <h3>{"Door access"}</h3>
-    
+
             {
                 door_access_list.iter().enumerate().map(|(index, access)| {
                     let door_name = doors.iter()
                         .find(|door| door.id == access.door_id)
                         .map(|door| door.name.clone())
                         .unwrap_or_else(|| format!("Door #{}", access.door_id));
-    
-                    let remove_event = {
-                        let door_access_list = door_access_list.clone();
-    
-                        Callback::from(move |_| {
-                            let mut updated = (*door_access_list).clone();
-                            updated.remove(index);
-                            door_access_list.set(updated);
-                        })
-                    };
-    
+
                     let always_allowed_event = {
                         let door_access_list = door_access_list.clone();
-    
+
                         Callback::from(move |_: Event| {
                             let mut updated = (*door_access_list).clone();
                             updated[index].always_allowed =
@@ -423,14 +473,24 @@ pub fn users_page() -> Html {
                             door_access_list.set(updated);
                         })
                     };
-    
+
+                    let remove_event = {
+                        let door_access_list = door_access_list.clone();
+
+                        Callback::from(move |_| {
+                            let mut updated = (*door_access_list).clone();
+                            updated.remove(index);
+                            door_access_list.set(updated);
+                        })
+                    };
+
                     html! {
                         <div class="door-access-entry">
                             <div>
-                                <strong>{door_name}</strong>
+                                <strong>{ door_name }</strong>
                                 <button onclick={remove_event}>{"Remove"}</button>
                             </div>
-    
+
                             <label>
                                 <input
                                     type="checkbox"
@@ -439,123 +499,94 @@ pub fn users_page() -> Html {
                                 />
                                 {" Always allowed (24/7)"}
                             </label>
-    
-                            {
-                                if access.always_allowed {
-                                    html! {
-                                        <p>{"This user can access this door at any time."}</p>
-                                    }
-                                } else {
-                                    html! {
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>{"Day"}</th>
-                                                    <th>{"Allowed"}</th>
-                                                    <th>{"From"}</th>
-                                                    <th>{"Until"}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {
-                                                    DAY_NAMES.iter().enumerate().map(
-                                                        |(day_index, day_name)| {
-                                                            let day = access.schedule[day_index].clone();
-    
-                                                            let toggle_event = {
-                                                                let door_access_list =
-                                                                    door_access_list.clone();
-    
-                                                                Callback::from(move |_: Event| {
-                                                                    let mut updated =
-                                                                        (*door_access_list).clone();
-    
-                                                                    updated[index].schedule[day_index].enabled =
-                                                                        !updated[index].schedule[day_index].enabled;
-    
-                                                                    door_access_list.set(updated);
-                                                                })
-                                                            };
-    
-                                                            let start_event = {
-                                                                let door_access_list =
-                                                                    door_access_list.clone();
-    
-                                                                Callback::from(move |e: InputEvent| {
-                                                                    if let Some(input) =
-                                                                        e.target_dyn_into::<HtmlInputElement>()
-                                                                    {
-                                                                        let mut updated =
-                                                                            (*door_access_list).clone();
-    
-                                                                        updated[index].schedule[day_index].start =
-                                                                            input.value();
-    
-                                                                        door_access_list.set(updated);
-                                                                    }
-                                                                })
-                                                            };
-    
-                                                            let end_event = {
-                                                                let door_access_list =
-                                                                    door_access_list.clone();
-    
-                                                                Callback::from(move |e: InputEvent| {
-                                                                    if let Some(input) =
-                                                                        e.target_dyn_into::<HtmlInputElement>()
-                                                                    {
-                                                                        let mut updated =
-                                                                            (*door_access_list).clone();
-    
-                                                                        updated[index].schedule[day_index].end =
-                                                                            input.value();
-    
-                                                                        door_access_list.set(updated);
-                                                                    }
-                                                                })
-                                                            };
-    
-                                                            html! {
-                                                                <tr>
-                                                                    <td>{*day_name}</td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={day.enabled}
-                                                                            onchange={toggle_event}
-                                                                        />
-                                                                    </td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="time"
-                                                                            value={day.start.clone()}
-                                                                            oninput={start_event}
-                                                                            disabled={!day.enabled}
-                                                                        />
-                                                                    </td>
-                                                                    <td>
-                                                                        <input
-                                                                            type="time"
-                                                                            value={day.end.clone()}
-                                                                            oninput={end_event}
-                                                                            disabled={!day.enabled}
-                                                                        />
-                                                                    </td>
-                                                                </tr>
-                                                            }
-                                                        }
-                                                    ).collect::<Html>()
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>{"Day"}</th>
+                                        <th>{"Allowed"}</th>
+                                        <th>{"From"}</th>
+                                        <th>{"Until"}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {
+                                    DAY_NAMES.iter().enumerate().map(|(day_index, day_name)| {
+                                        let day = access.schedule[day_index].clone();
+
+                                        let toggle_event = {
+                                            let door_access_list = door_access_list.clone();
+
+                                            Callback::from(move |_: Event| {
+                                                let mut updated = (*door_access_list).clone();
+                                                updated[index].schedule[day_index].enabled =
+                                                    !updated[index].schedule[day_index].enabled;
+                                                door_access_list.set(updated);
+                                            })
+                                        };
+
+                                        let start_event = {
+                                            let door_access_list = door_access_list.clone();
+
+                                            Callback::from(move |e: InputEvent| {
+                                                if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+                                                    let mut updated = (*door_access_list).clone();
+                                                    updated[index].schedule[day_index].start = input.value();
+                                                    door_access_list.set(updated);
                                                 }
-                                            </tbody>
-                                        </table>
-                                    }
+                                            })
+                                        };
+
+                                        let end_event = {
+                                            let door_access_list = door_access_list.clone();
+
+                                            Callback::from(move |e: InputEvent| {
+                                                if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+                                                    let mut updated = (*door_access_list).clone();
+                                                    updated[index].schedule[day_index].end = input.value();
+                                                    door_access_list.set(updated);
+                                                }
+                                            })
+                                        };
+
+                                        html! {
+                                            <tr>
+                                                <td>{ *day_name }</td>
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={day.enabled}
+                                                        disabled={access.always_allowed}
+                                                        onchange={toggle_event}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        type="time"
+                                                        value={day.start.clone()}
+                                                        oninput={start_event}
+                                                        disabled={access.always_allowed || !day.enabled}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        type="time"
+                                                        value={day.end.clone()}
+                                                        oninput={end_event}
+                                                        disabled={access.always_allowed || !day.enabled}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        }
+                                    }).collect::<Html>()
                                 }
-                            }
+                                </tbody>
+                            </table>
                         </div>
                     }
                 }).collect::<Html>()
             }
-    
+
             {
                 if available_doors.is_empty() {
                     if doors.is_empty() {
@@ -570,39 +601,43 @@ pub fn users_page() -> Html {
                                 {
                                     available_doors.iter().map(|door| {
                                         html! {
-                                            <option value={door.id.to_string()}>
-                                                {&door.name}
-                                            </option>
+                                            <option value={door.id.to_string()}>{ &door.name }</option>
                                         }
                                     }).collect::<Html>()
                                 }
                             </select>
-    
-                            <button onclick={add_door_access_event}>
-                                {"Add door access"}
-                            </button>
+                            <button onclick={add_door_access_event}>{"Add door access"}</button>
                         </div>
                     }
                 }
             }
         </div>
     };
-    // The fingerprint scan block: pick a door, scan, see whether a
-    // fingerprint has been captured. Reused in both panels.
+
     let fingerprint_section: Html = html! {
         <div class="fingerprint-scan">
-            <select ref={&fingerprint_door_select_ref} disabled={doors.is_empty()}>
+            <select
+                ref={&fingerprint_door_select_ref}
+                disabled={doors.is_empty()}
+            >
                 {
                     doors.iter().enumerate().map(|(index, door)| {
                         html! {
-                            <option value={door.id.to_string()} selected={index == 0}>{ &door.name }</option>
+                            <option value={door.id.to_string()} selected={index == 0}>
+                                { &door.name }
+                            </option>
                         }
                     }).collect::<Html>()
                 }
             </select>
-            <button onclick={get_new_fingerprint_button_event} disabled={doors.is_empty()}>
+
+            <button
+                onclick={get_new_fingerprint_button_event}
+                disabled={doors.is_empty()}
+            >
                 {"Scan fingerprint"}
             </button>
+
             {
                 if fingerprint_data.is_empty() {
                     html! { <span>{"No fingerprint captured yet"}</span> }
@@ -613,83 +648,143 @@ pub fn users_page() -> Html {
         </div>
     };
 
-    let user = get_single_user_data(*id_from_table, &users); // get user data for editing panel
+    let user = get_single_user_data(*id_from_table, &users);
 
     html! {
         <>
             if *show_add_panel {
-                <div class="modal-backdrop" onclick={close_add_panel.clone()}>
+                <div
+                    class="modal-backdrop"
+                    onclick={close_add_panel.clone()}
+                >
                     <div
                         class="modal"
                         onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
                     >
-                        <h2>{ "Add a user" }</h2>
+                        <h2>{"Add a user"}</h2>
 
                         <div>
-                            <input type="text" ref={&first_name_input_ref} required=true placeholder="First Name"/>
-                            <input type="text" ref={&last_name_input_ref} required=true placeholder="Last Name"/>
-                            <label><input type="checkbox" ref={&admin_input_ref}/>{" Administrator"}</label>
-                            <label><input type="checkbox" ref={&group_leader_input_ref}/>{" Group leader"}</label>
-                            <label>{"Expires on (optional)"}<input type="date" ref={&expiration_input_ref}/></label>
+                            <input
+                                type="text"
+                                ref={&first_name_input_ref}
+                                required=true
+                                placeholder="First Name"
+                            />
+
+                            <input
+                                type="text"
+                                ref={&last_name_input_ref}
+                                required=true
+                                placeholder="Last Name"
+                            />
+
+                            <label>
+                                <input type="checkbox" ref={&admin_input_ref}/>
+                                {" Administrator"}
+                            </label>
+
+                            <label>
+                                <input type="checkbox" ref={&group_leader_input_ref}/>
+                                {" Group leader"}
+                            </label>
+
+                            <label>
+                                {"Expires on (optional)"}
+                                <input type="date" ref={&expiration_input_ref}/>
+                            </label>
                         </div>
 
                         { fingerprint_section.clone() }
-
                         { door_access_section.clone() }
 
                         <div>
                             <button onclick={add_user_button_event}>{"Add"}</button>
                             <button onclick={close_add_panel}>{"Cancel"}</button>
                         </div>
-
                     </div>
                 </div>
-            }
-
-            else if *show_edit_panel {
-
-
-                <div class="modal-backdrop" onclick={close_edit_panel.clone()}>
+            } else if *show_edit_panel {
+                <div
+                    class="modal-backdrop"
+                    onclick={close_edit_panel.clone()}
+                >
                     <div
                         class="modal"
                         onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
                     >
-                        <h2>{ "Edit User" }</h2>
+                        <h2>{"Edit User"}</h2>
 
-                        <div>
-                            <input type="text" ref={&first_name_input_ref} required=true
-                                value={user.as_ref().unwrap().firstName.clone()} placeholder="First Name"/>
+                        {
+                            if let Some(user) = user.as_ref() {
+                                html! {
+                                    <>
+                                        <div>
+                                            <input
+                                                type="text"
+                                                ref={&first_name_input_ref}
+                                                required=true
+                                                value={user.first_name.clone()}
+                                                placeholder="First Name"
+                                            />
 
-                            <input type="text" ref={&last_name_input_ref} required=true
-                                value={user.as_ref().unwrap().lastName.clone()} placeholder="Last Name"/>
+                                            <input
+                                                type="text"
+                                                ref={&last_name_input_ref}
+                                                required=true
+                                                value={user.last_name.clone()}
+                                                placeholder="Last Name"
+                                            />
 
-                            <label><input type="checkbox" ref={&admin_input_ref}
-                                checked={user.as_ref().unwrap().is_admin}/>{" Administrator"}</label>
-                            <label><input type="checkbox" ref={&group_leader_input_ref}
-                                checked={user.as_ref().unwrap().is_group_leader}/>{" Group leader"}</label>
-                            <label>{"Expires on (optional)"}<input type="date" ref={&expiration_input_ref}
-                                value={user.as_ref().unwrap().expires_on.clone().unwrap_or_default()}/></label>
-                        </div>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    ref={&admin_input_ref}
+                                                    checked={user.is_admin}
+                                                />
+                                                {" Administrator"}
+                                            </label>
 
-                        { fingerprint_section.clone() }
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    ref={&group_leader_input_ref}
+                                                    checked={user.is_group_leader}
+                                                />
+                                                {" Group leader"}
+                                            </label>
 
-                        { door_access_section.clone() }
+                                            <label>
+                                                {"Expires on (optional)"}
+                                                <input
+                                                    type="date"
+                                                    ref={&expiration_input_ref}
+                                                    value={user.expires_on.clone().unwrap_or_default()}
+                                                />
+                                            </label>
+                                        </div>
 
-                        <div>
-                            <button onclick={edit_user_button_event}>{"Apply"}</button>
-                            <button onclick={close_edit_panel}>{"Cancel"}</button>
-                        </div>
+                                        { fingerprint_section.clone() }
+                                        { door_access_section.clone() }
 
+                                        <div>
+                                            <button onclick={edit_user_button_event}>{"Apply"}</button>
+                                            <button onclick={close_edit_panel}>{"Cancel"}</button>
+                                        </div>
+                                    </>
+                                }
+                            } else {
+                                html! {
+                                    <p>{"User not found."}</p>
+                                }
+                            }
+                        }
                     </div>
                 </div>
-            }
-
-
-            else {
-
+            } else {
                 <h1>{"Users"}</h1>
 
                 <p>{format!("Loaded {} users", users.len())}</p>
+
                 <button onclick={open_add_panel}>{"Add user"}</button>
 
                 if users.is_empty() {
@@ -705,6 +800,7 @@ pub fn users_page() -> Html {
                             <th>{"Roles"}</th>
                             <th>{"Expires on"}</th>
                             <th>{"Door Access"}</th>
+                            <th>{"Actions"}</th>
                         </tr>
                     </thead>
 
@@ -731,29 +827,37 @@ pub fn users_page() -> Html {
 
                                 html! {
                                     <tr>
-                                        <td>{&user.id}</td>
-                                        <td>{&user.firstName}</td>
-                                        <td>{&user.lastName}</td>
+                                        <td>{ user.id }</td>
+                                        <td>{ &user.first_name }</td>
+                                        <td>{ &user.last_name }</td>
                                         <td>{
                                             [
                                                 if user.is_admin { Some("Admin") } else { None },
                                                 if user.is_group_leader { Some("Group leader") } else { None },
-                                            ].into_iter().flatten().collect::<Vec<&str>>().join(", ")
+                                            ]
+                                            .into_iter()
+                                            .flatten()
+                                            .collect::<Vec<&str>>()
+                                            .join(", ")
                                         }</td>
-                                        <td>{user.expires_on.clone().unwrap_or_else(|| "Never".to_string())}</td>
-                                        <td>{door_names}</td>
+                                        <td>{ user.expires_on.clone().unwrap_or_else(|| "Never".to_string()) }</td>
+                                        <td>{ door_names }</td>
                                         <td>
                                             <button onclick={
                                                 Callback::from(move |_: MouseEvent| {
                                                     open_edit_panel.emit(id);
                                                 })
-                                            }>{"edit"}</button>
+                                            }>
+                                                {"Edit"}
+                                            </button>
 
                                             <button onclick={
                                                 Callback::from(move |_: MouseEvent| {
                                                     delete_user_button_event.emit(id);
                                                 })
-                                            }> {"delete"}</button>
+                                            }>
+                                                {"Delete"}
+                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -761,7 +865,6 @@ pub fn users_page() -> Html {
                         }
                     </tbody>
                 </table>
-
             }
         </>
     }
@@ -769,6 +872,7 @@ pub fn users_page() -> Html {
 
 async fn get_new_fingerprint(door_ip: &str, user_id: u32) -> Result<(), String> {
     let url = format!("https://{door_ip}:8000/get-fingerprint/?user_id={user_id}");
+
     let response = Request::get(url.as_str())
         .send()
         .await
@@ -783,30 +887,26 @@ async fn get_new_fingerprint(door_ip: &str, user_id: u32) -> Result<(), String> 
 
 async fn refresh_users(users: UseStateHandle<Vec<User>>) {
     let mut data = fetch_data().await;
-
     data.sort_by_key(|user| user.id);
-
     users.set(data);
 }
 
 async fn fetch_data() -> Vec<User> {
-
     let response = Request::get("https://127.0.0.1:8000/users-data")
-            .credentials(web_sys::RequestCredentials::Include)
-            .send()
-            .await
-            .unwrap();
+        .credentials(web_sys::RequestCredentials::Include)
+        .send()
+        .await
+        .unwrap();
 
     response.json::<Vec<User>>().await.unwrap()
 }
 
 async fn fetch_doors() -> Vec<DoorOption> {
-
     let response = Request::get("https://127.0.0.1:8000/doors-data")
-            .credentials(web_sys::RequestCredentials::Include)
-            .send()
-            .await
-            .unwrap();
+        .credentials(web_sys::RequestCredentials::Include)
+        .send()
+        .await
+        .unwrap();
 
     response.json::<Vec<DoorOption>>().await.unwrap()
 }
@@ -823,8 +923,8 @@ async fn add_user(
 ) -> bool {
     let user = User {
         id,
-        firstName: first_name,
-        lastName: last_name,
+        first_name,
+        last_name,
         is_admin,
         is_group_leader,
         expires_on,
@@ -832,7 +932,10 @@ async fn add_user(
         fingerprint,
     };
 
-    let Ok(body) = serde_json::to_string(&user) else { return false; };
+    let Ok(body) = serde_json::to_string(&user) else {
+        return false;
+    };
+
     match Request::put(format!("https://127.0.0.1:8000/add-user/{id}").as_str())
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
@@ -858,8 +961,8 @@ async fn edit_user(
 ) -> bool {
     let user = User {
         id,
-        firstName: first_name,
-        lastName: last_name,
+        first_name,
+        last_name,
         is_admin,
         is_group_leader,
         expires_on,
@@ -867,7 +970,10 @@ async fn edit_user(
         fingerprint,
     };
 
-    let Ok(body) = serde_json::to_string(&user) else { return false; };
+    let Ok(body) = serde_json::to_string(&user) else {
+        return false;
+    };
+
     match Request::post(format!("https://127.0.0.1:8000/edit-user/{id}").as_str())
         .credentials(web_sys::RequestCredentials::Include)
         .header("Content-Type", "application/json")
@@ -892,24 +998,20 @@ async fn delete_user(id: u32) -> bool {
     }
 }
 
-fn get_single_user_data(id: u32, users: &Vec<User>) -> Option<User> {
-    for user in users {
-        if user.id == id {
-            return Some(user.clone());
-        }
-    }
-    None
-     // I know that this is very stupid
-     // i know i have to implement error handling for this, but I do not have the patience to do it right now
+fn get_single_user_data(id: u32, users: &[User]) -> Option<User> {
+    users.iter().find(|user| user.id == id).cloned()
 }
 
 fn find_available_id(users: &[User]) -> u32 {
     let mut candidate = 1u32;
+
     while users.iter().any(|user| user.id == candidate) {
         candidate = candidate.saturating_add(1);
+
         if candidate == u32::MAX {
             break;
         }
     }
+
     candidate
 }
