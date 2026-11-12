@@ -1,13 +1,13 @@
 {
   "id": 1,
-  "firstName": "max",
-  "lastName": "mustermann",
+  "firstName": "Big",
+  "lastName": "Fritz",
   "isAdmin": false,
   "isGroupLeader": true,
-  "expiresOn": "2026-10-31",
+  "expiresOn": null,
   "doorAccess": [
     {
-      "doorId": 2,
+      "doorId": 1,
       "alwaysAllowed": true,
       "schedule": [
         {
@@ -46,7 +46,51 @@
           "end": "17:00"
         }
       ]
+    },
+    {
+      "doorId": 2,
+      "alwaysAllowed": false,
+      "schedule": [
+        {
+          "enabled": true,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": true,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "enabled": false,
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ]
     }
   ],
-  "fingerprint": ""
+  "fingerIds": [
+    1
+  ],
+  "openDuration": 495
 }

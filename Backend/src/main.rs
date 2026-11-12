@@ -72,8 +72,22 @@ struct User {
     expires_on: Option<String>,
     #[serde(default, alias = "door_access")]
     door_access: Vec<DoorAccess>,
-    #[serde(default)]
-    fingerprint: String,
+    // One ID per enrolled finger. For now always `[id]`.
+    #[serde(default, alias = "finger_ids")]
+    finger_ids: Vec<u32>,
+    // Minutes the door stays open when a group leader presses the button.
+    #[serde(default, alias = "open_duration")]
+    open_duration: u32,
+}
+
+impl User {
+    // Until multiple fingers can be enrolled, the only finger ID is the user ID.
+    fn normalized(mut self) -> Self {
+        if self.finger_ids.is_empty() {
+            self.finger_ids = vec![self.id];
+        }
+        self
+    }
 }
 
 #[get("/get-auth-state")]
@@ -152,7 +166,7 @@ fn users_data(cookies: &CookieJar<'_>) -> Result<Json<Vec<User>>, Status> {
         };
 
         if let Ok(user) = serde_json::from_str::<User>(&content) {
-            users.push(user);
+            users.push(user.normalized());
         }
     }
 
@@ -182,7 +196,7 @@ fn add_user(id: u32, user: Json<User>, cookies: &CookieJar<'_>) -> Status {
         return Status::Conflict;
     }
 
-    let json = match serde_json::to_string_pretty(&*user) {
+    let json = match serde_json::to_string_pretty(&(*user).clone().normalized()) {
         Ok(value) => value,
         Err(_) => return Status::InternalServerError,
     };
@@ -231,7 +245,7 @@ fn edit_user(id: u32, user: Json<User>, cookies: &CookieJar<'_>) -> Status {
         return Status::NotFound;
     }
 
-    let json = match serde_json::to_string_pretty(&*user) {
+    let json = match serde_json::to_string_pretty(&(*user).clone().normalized()) {
         Ok(value) => value,
         Err(_) => return Status::InternalServerError,
     };

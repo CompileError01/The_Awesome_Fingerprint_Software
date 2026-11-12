@@ -1,10 +1,10 @@
 {
   "id": 2,
-  "firstName": "jon",
-  "lastName": "doe",
+  "firstName": "Linus",
+  "lastName": "Torvalds",
   "isAdmin": false,
-  "isGroupLeader": true,
-  "expiresOn": null,
+  "isGroupLeader": false,
+  "expiresOn": "2027-01-12",
   "doorAccess": [
     {
       "doorId": 1,
@@ -16,7 +16,7 @@
           "end": "17:00"
         },
         {
-          "enabled": false,
+          "enabled": true,
           "start": "09:00",
           "end": "17:00"
         },
@@ -26,53 +26,12 @@
           "end": "17:00"
         },
         {
-          "enabled": false,
+          "enabled": true,
           "start": "09:00",
           "end": "17:00"
         },
         {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        }
-      ]
-    },
-    {
-      "doorId": 2,
-      "alwaysAllowed": true,
-      "schedule": [
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
-          "start": "09:00",
-          "end": "17:00"
-        },
-        {
-          "enabled": false,
+          "enabled": true,
           "start": "09:00",
           "end": "17:00"
         },
@@ -89,5 +48,8 @@
       ]
     }
   ],
-  "fingerprint": ""
+  "fingerIds": [
+    2
+  ],
+  "openDuration": 0
 }

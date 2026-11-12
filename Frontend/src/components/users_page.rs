@@ -95,8 +95,12 @@ struct User {
     expires_on: Option<String>,
     #[serde(default, alias = "door_access")]
     door_access: Vec<DoorAccess>,
-    #[serde(default)]
-    fingerprint: String,
+    // One ID per enrolled finger. For now always `[id]`.
+    #[serde(default, alias = "finger_ids")]
+    finger_ids: Vec<u32>,
+    // Minutes the door stays open when a group leader presses the button.
+    #[serde(default, alias = "open_duration")]
+    open_duration: u32,
 }
 
 #[function_component(UsersPage)]
@@ -139,15 +143,19 @@ pub fn users_page() -> Html {
     let admin_input_ref = use_node_ref();
     let group_leader_input_ref = use_node_ref();
     let expiration_input_ref = use_node_ref();
+    let open_hours_input_ref = use_node_ref();
+    let open_minutes_input_ref = use_node_ref();
 
     let first_name_input_ref_cb = first_name_input_ref.clone();
     let last_name_input_ref_cb = last_name_input_ref.clone();
     let admin_input_ref_cb = admin_input_ref.clone();
     let group_leader_input_ref_cb = group_leader_input_ref.clone();
     let expiration_input_ref_cb = expiration_input_ref.clone();
+    let open_hours_input_ref_cb = open_hours_input_ref.clone();
+    let open_minutes_input_ref_cb = open_minutes_input_ref.clone();
 
     let door_access_list = use_state(Vec::<DoorAccess>::new);
-    let fingerprint_data = use_state(String::new);
+    let finger_ids = use_state(Vec::<u32>::new);
     let fingerprint_user_id = use_state(|| 1u32);
 
     let new_door_select_ref = use_node_ref();
@@ -156,12 +164,12 @@ pub fn users_page() -> Html {
     let open_add_panel = {
         let show_add_panel = show_add_panel.clone();
         let door_access_list = door_access_list.clone();
-        let fingerprint_data = fingerprint_data.clone();
+        let finger_ids = finger_ids.clone();
         let fingerprint_user_id = fingerprint_user_id.clone();
 
         Callback::from(move |_| {
             door_access_list.set(Vec::new());
-            fingerprint_data.set(String::new());
+            finger_ids.set(vec![latest_id]);
             fingerprint_user_id.set(latest_id);
             show_add_panel.set(true);
         })
@@ -179,7 +187,7 @@ pub fn users_page() -> Html {
         let show_edit_panel = show_edit_panel.clone();
         let id_from_table = id_from_table.clone();
         let door_access_list = door_access_list.clone();
-        let fingerprint_data = fingerprint_data.clone();
+        let finger_ids = finger_ids.clone();
         let fingerprint_user_id = fingerprint_user_id.clone();
         let users = users.clone();
 
@@ -189,7 +197,11 @@ pub fn users_page() -> Html {
 
             if let Some(user) = users.iter().find(|user| user.id == id) {
                 door_access_list.set(user.door_access.clone());
-                fingerprint_data.set(user.fingerprint.clone());
+                finger_ids.set(if user.finger_ids.is_empty() {
+                    vec![id]
+                } else {
+                    user.finger_ids.clone()
+                });
             }
 
             show_edit_panel.set(true)
@@ -206,6 +218,8 @@ pub fn users_page() -> Html {
     let admin_input_ref_cb_clone = admin_input_ref_cb.clone();
     let group_leader_input_ref_cb_clone = group_leader_input_ref_cb.clone();
     let expiration_input_ref_cb_clone = expiration_input_ref_cb.clone();
+    let open_hours_input_ref_cb_clone = open_hours_input_ref_cb.clone();
+    let open_minutes_input_ref_cb_clone = open_minutes_input_ref_cb.clone();
 
     let add_door_access_event = {
         let door_access_list = door_access_list.clone();
@@ -228,7 +242,7 @@ pub fn users_page() -> Html {
     let add_user_button_event = {
         let show_add_panel = show_add_panel.clone();
         let door_access_list = door_access_list.clone();
-        let fingerprint_data = fingerprint_data.clone();
+        let finger_ids = finger_ids.clone();
         let users = users.clone();
 
         Callback::from(move |_| {
@@ -266,9 +280,14 @@ pub fn users_page() -> Html {
                 .map(|input| input.value())
                 .filter(|value| !value.is_empty());
 
+            let open_duration = read_open_duration(
+                &open_hours_input_ref_cb,
+                &open_minutes_input_ref_cb,
+            );
+
             if !first_name.is_empty() && !last_name.is_empty() {
                 let door_access = (*door_access_list).clone();
-                let fingerprint = (*fingerprint_data).clone();
+                let finger_ids = (*finger_ids).clone();
 
                 spawn_local(async move {
                     let result = add_user(
@@ -279,7 +298,8 @@ pub fn users_page() -> Html {
                         is_group_leader,
                         expires_on,
                         door_access,
-                        fingerprint,
+                        finger_ids,
+                        open_duration,
                     )
                     .await;
 
@@ -335,7 +355,7 @@ pub fn users_page() -> Html {
         let show_edit_panel = show_edit_panel.clone();
         let id = *id_from_table;
         let door_access_list = door_access_list.clone();
-        let fingerprint_data = fingerprint_data.clone();
+        let finger_ids = finger_ids.clone();
         let users = users.clone();
 
         Callback::from(move |_| {
@@ -364,6 +384,11 @@ pub fn users_page() -> Html {
                 .map(|input| input.value())
                 .filter(|value| !value.is_empty());
 
+            let open_duration = read_open_duration(
+                &open_hours_input_ref_cb_clone,
+                &open_minutes_input_ref_cb_clone,
+            );
+
             if first_name.is_empty() || last_name.is_empty() {
                 window()
                     .unwrap()
@@ -374,7 +399,7 @@ pub fn users_page() -> Html {
             }
 
             let door_access = (*door_access_list).clone();
-            let fingerprint = (*fingerprint_data).clone();
+            let finger_ids = (*finger_ids).clone();
             let users = users.clone();
 
             spawn_local(async move {
@@ -386,7 +411,8 @@ pub fn users_page() -> Html {
                     is_group_leader,
                     expires_on,
                     door_access,
-                    fingerprint,
+                    finger_ids,
+                    open_duration,
                 )
                 .await;
 
@@ -638,13 +664,18 @@ pub fn users_page() -> Html {
                 {"Scan fingerprint"}
             </button>
 
-            {
-                if fingerprint_data.is_empty() {
-                    html! { <span>{"No fingerprint captured yet"}</span> }
-                } else {
-                    html! { <span>{"Fingerprint captured ✓"}</span> }
+            <span>
+                {
+                    format!(
+                        "Finger IDs: {}",
+                        finger_ids
+                            .iter()
+                            .map(|finger_id| finger_id.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
                 }
-            }
+            </span>
         </div>
     };
 
@@ -691,6 +722,27 @@ pub fn users_page() -> Html {
                             <label>
                                 {"Expires on (optional)"}
                                 <input type="date" ref={&expiration_input_ref}/>
+                            </label>
+
+                            <label>
+                                {"Open duration (group leaders)"}
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    ref={&open_hours_input_ref}
+                                    value="0"
+                                />
+                                {" h "}
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    step="1"
+                                    ref={&open_minutes_input_ref}
+                                    value="0"
+                                />
+                                {" min"}
                             </label>
                         </div>
 
@@ -760,6 +812,27 @@ pub fn users_page() -> Html {
                                                     ref={&expiration_input_ref}
                                                     value={user.expires_on.clone().unwrap_or_default()}
                                                 />
+                                            </label>
+
+                                            <label>
+                                                {"Open duration (group leaders)"}
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    ref={&open_hours_input_ref}
+                                                    value={(user.open_duration / 60).to_string()}
+                                                />
+                                                {" h "}
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="59"
+                                                    step="1"
+                                                    ref={&open_minutes_input_ref}
+                                                    value={(user.open_duration % 60).to_string()}
+                                                />
+                                                {" min"}
                                             </label>
                                         </div>
 
@@ -870,6 +943,20 @@ pub fn users_page() -> Html {
     }
 }
 
+// Combines the hours and minutes inputs into a total number of minutes.
+fn read_open_duration(hours_ref: &NodeRef, minutes_ref: &NodeRef) -> u32 {
+    let read = |node_ref: &NodeRef| {
+        node_ref
+            .cast::<HtmlInputElement>()
+            .and_then(|input| input.value().trim().parse::<u32>().ok())
+            .unwrap_or(0)
+    };
+
+    read(hours_ref)
+        .saturating_mul(60)
+        .saturating_add(read(minutes_ref))
+}
+
 async fn get_new_fingerprint(door_ip: &str, user_id: u32) -> Result<(), String> {
     let url = format!("https://{door_ip}:8000/get-fingerprint/?user_id={user_id}");
 
@@ -919,7 +1006,8 @@ async fn add_user(
     is_group_leader: bool,
     expires_on: Option<String>,
     door_access: Vec<DoorAccess>,
-    fingerprint: String,
+    finger_ids: Vec<u32>,
+    open_duration: u32,
 ) -> bool {
     let user = User {
         id,
@@ -929,7 +1017,8 @@ async fn add_user(
         is_group_leader,
         expires_on,
         door_access,
-        fingerprint,
+        finger_ids,
+        open_duration,
     };
 
     let Ok(body) = serde_json::to_string(&user) else {
@@ -957,7 +1046,8 @@ async fn edit_user(
     is_group_leader: bool,
     expires_on: Option<String>,
     door_access: Vec<DoorAccess>,
-    fingerprint: String,
+    finger_ids: Vec<u32>,
+    open_duration: u32,
 ) -> bool {
     let user = User {
         id,
@@ -967,7 +1057,8 @@ async fn edit_user(
         is_group_leader,
         expires_on,
         door_access,
-        fingerprint,
+        finger_ids,
+        open_duration,
     };
 
     let Ok(body) = serde_json::to_string(&user) else {
