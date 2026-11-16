@@ -1,7 +1,7 @@
 
 ## Pi side:
 ``` 
-/get-fingerprint/id - GET Request at port 8000 
+/enroll-start/id - GET Request at port 8000 
 	returns 200 OK if enrollment mode was successfully activated
 ```
 
